@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { getDeviceId, isAdminDevice, isValidPlayerId } from "@/lib/device";
+import { isValidPlayerId, resolveDevice } from "@/lib/device";
 
 const PROMO_CODE = "KAJO117";
 const PLATFORM_URL = "https://ultrapari.com";
@@ -63,6 +63,7 @@ function TermsPage() {
   const [usersOnline, setUsersOnline] = useState(0);
 
   const [deviceId, setDeviceId] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<SubmissionStatus | null>(null);
 
@@ -81,15 +82,16 @@ function TermsPage() {
   }, []);
 
   useEffect(() => {
-    const id = getDeviceId();
-    setDeviceId(id);
     void (async () => {
+      const { deviceId: id, candidates, isAdmin: admin } = await resolveDevice();
+      setDeviceId(id);
+      setIsAdmin(admin);
       const { data } = await supabase
         .from("submissions")
         .select("status")
-        .eq("device_id", id)
-        .maybeSingle();
-      if (data) setStatus(data.status as SubmissionStatus);
+        .in("device_id", candidates.length ? candidates : [id])
+        .limit(1);
+      if (data && data.length > 0) setStatus(data[0].status as SubmissionStatus);
       setLoading(false);
     })();
   }, []);
@@ -150,7 +152,7 @@ function TermsPage() {
         <div className="mx-auto flex h-16 max-w-3xl items-center justify-between gap-2 px-4">
           <span className="gold-text text-lg font-black tracking-wide">KAJO ARENA</span>
           <div className="flex items-center gap-2">
-            {isAdminDevice(deviceId) && (
+            {isAdmin && (
               <Button size="sm" variant="outline" asChild>
                 <Link to="/admin">
                   <ShieldCheck className="size-4" />

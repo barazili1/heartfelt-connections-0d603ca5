@@ -16,7 +16,7 @@ import { Particles } from "@/components/Particles";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { getDeviceId, isAdminDevice } from "@/lib/device";
+import { resolveDevice } from "@/lib/device";
 
 type Status = "pending" | "approved" | "rejected";
 
@@ -48,12 +48,17 @@ export const Route = createFileRoute("/admin")({
 
 function AdminPage() {
   const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [rows, setRows] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [preview, setPreview] = useState<string | null>(null);
 
   useEffect(() => {
-    setDeviceId(getDeviceId());
+    void (async () => {
+      const info = await resolveDevice();
+      setDeviceId(info.deviceId);
+      setIsAdmin(info.isAdmin);
+    })();
   }, []);
 
   const load = useCallback(async () => {
@@ -80,8 +85,8 @@ function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (deviceId && isAdminDevice(deviceId)) void load();
-  }, [deviceId, load]);
+    if (isAdmin) void load();
+  }, [isAdmin, load]);
 
   const review = async (id: string, status: Status) => {
     await supabase.from("submissions").update({ status }).eq("id", id);
@@ -126,9 +131,9 @@ function AdminPage() {
     link.click();
   };
 
-  if (deviceId === null) return null;
+  if (deviceId === null || isAdmin === null) return null;
 
-  if (!isAdminDevice(deviceId)) {
+  if (!isAdmin) {
     return (
       <div dir="rtl" className="relative flex min-h-screen items-center justify-center bg-background px-4">
         <Particles />
