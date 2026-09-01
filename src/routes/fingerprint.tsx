@@ -67,19 +67,20 @@ function FingerprintPage() {
     ? [
         ["GPU Vendor", <Monitor className="size-4" key="a" />, traits.gpuVendor],
         ["GPU Renderer", <Monitor className="size-4" key="b" />, traits.gpuRenderer],
-        ["Canvas Hash", <Fingerprint className="size-4" key="c" />, traits.canvasHash.slice(0, 32)],
-        ["Audio Hash", <Waves className="size-4" key="d" />, traits.audioHash.slice(0, 32)],
-        ["CPU Cores", <Cpu className="size-4" key="e" />, String(traits.cpuCores)],
+        ["CPU Cores", <Cpu className="size-4" key="c" />, String(traits.cpuCores)],
+        ["Device Memory", <Cpu className="size-4" key="d" />, traits.deviceMemory],
         [
           "Screen",
-          <Monitor className="size-4" key="f" />,
-          `${traits.screen} · ${traits.colorDepth}-bit · dpr ${traits.devicePixelRatio}`,
+          <Monitor className="size-4" key="e" />,
+          `${traits.screen} · ${traits.colorDepth}/${traits.pixelDepth}-bit · dpr ${traits.devicePixelRatio}`,
         ],
-        ["Platform / TZ", <Cpu className="size-4" key="g" />, `${traits.platform} · ${traits.timezone}`],
-        ["Fonts", <Cpu className="size-4" key="h" />, traits.fonts || "—"],
+        ["Timezone", <Waves className="size-4" key="f" />, traits.timezone],
+        ["Languages", <Waves className="size-4" key="g" />, traits.languages || "—"],
+        ["System Fonts", <Fingerprint className="size-4" key="h" />, traits.fonts || "—"],
         ["Browser visitorId", <Fingerprint className="size-4" key="i" />, visitorId || "—"],
       ]
     : [];
+
 
   return (
     <div dir="rtl" className="relative min-h-screen overflow-hidden bg-background pb-20">
