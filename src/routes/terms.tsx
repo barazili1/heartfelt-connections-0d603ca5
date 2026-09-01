@@ -145,23 +145,41 @@ function TermsPage() {
       <Dialog open={warnOpen} onOpenChange={setWarnOpen}>
         <DialogContent
           dir="rtl"
-          className="glass max-w-sm bg-popover/80 text-right backdrop-blur-2xl"
+          showCloseButton={false}
+          className="overflow-hidden border-primary/30 bg-popover/70 p-0 text-right shadow-[0_30px_80px_-20px_color-mix(in_oklab,var(--primary)_45%,transparent)] backdrop-blur-2xl sm:max-w-md"
         >
-          <DialogHeader>
-            <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full border border-destructive/40 bg-destructive/15 text-destructive">
-              <AlertTriangle className="size-6" />
-            </div>
-            <DialogTitle className="gold-text text-center text-xl">تحذير</DialogTitle>
-            <DialogDescription className="text-center leading-7 text-muted-foreground">
-              الاشتراك يكون مرة واحدة فقط في المسابقة لكل هاتف، برجاء الالتزام بالشروط للانضمام
-              الصحيح للمسابقة وعدم حدوث أي مشاكل في تسجيلك.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button className="w-full font-bold" onClick={() => setWarnOpen(false)}>
-              فهمت، متابعة
-            </Button>
-          </DialogFooter>
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_50%_0%,color-mix(in_oklab,var(--primary)_22%,transparent),transparent_72%)]" />
+          <div className="h-px w-full bg-gradient-to-l from-transparent via-primary to-transparent" />
+
+          <div className="relative px-7 pb-7 pt-8">
+            <DialogHeader>
+              <div className="relative mx-auto mb-4 flex size-16 items-center justify-center">
+                <span className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
+                <span className="absolute inset-0 rounded-full border border-primary/40" />
+                <span className="flex size-12 items-center justify-center rounded-full bg-gradient-to-b from-primary/25 to-transparent text-primary">
+                  <AlertTriangle className="size-7" />
+                </span>
+              </div>
+              <DialogTitle className="gold-text text-center text-2xl font-black tracking-wide">
+                تحذير هام
+              </DialogTitle>
+              <div className="mx-auto mt-2 h-px w-24 bg-gradient-to-l from-transparent via-primary/70 to-transparent" />
+              <DialogDescription className="mt-3 text-center text-[0.95rem] leading-8 text-muted-foreground">
+                الاشتراك يكون <span className="font-bold text-primary">مرة واحدة فقط</span> في
+                المسابقة لكل هاتف، برجاء الالتزام بالشروط للانضمام الصحيح للمسابقة وعدم حدوث أي
+                مشاكل في تسجيلك.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="mt-6">
+              <Button
+                size="lg"
+                className="w-full rounded-xl font-black tracking-wide shadow-[0_10px_30px_-10px_color-mix(in_oklab,var(--primary)_60%,transparent)]"
+                onClick={() => setWarnOpen(false)}
+              >
+                فهمت، متابعة
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
