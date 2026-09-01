@@ -29,10 +29,10 @@ export function Particles({ count = 70 }: { count?: number }) {
     const parts = Array.from({ length: count }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
-      r: Math.random() * 1.8 + 0.6,
-      vx: (Math.random() - 0.5) * 0.25,
-      vy: -(Math.random() * 0.35 + 0.1),
-      a: Math.random() * 0.6 + 0.2,
+      r: Math.random() * 0.9 + 0.5,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: -(Math.random() * 0.3 + 0.08),
+      a: Math.random() * 0.5 + 0.3,
     }));
 
     const LINK_DIST = 130;
