@@ -73,6 +73,18 @@ export async function resolveDevice(): Promise<DeviceInfo> {
   return { deviceId, candidates, isAdmin };
 }
 
+/** One-time code that turns the current device into an admin device. */
+export const ADMIN_CLAIM_CODE = "KAJO-ADMIN-117";
+
+/** Registers the current device fingerprint as an admin device. */
+export async function claimAdmin(code: string): Promise<boolean> {
+  if (code.trim().toUpperCase() !== ADMIN_CLAIM_CODE) return false;
+  const fingerprint = await getDeviceId();
+  if (!fingerprint) return false;
+  await supabase.from("admin_devices").insert({ fingerprint });
+  return true;
+}
+
 export function isValidPlayerId(value: string): boolean {
   return /^17\d{7,10}$/.test(value);
 }
