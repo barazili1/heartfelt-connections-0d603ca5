@@ -3,6 +3,11 @@ import { AlertTriangle, Check, Copy, Download, ImagePlus, UserPlus } from "lucid
 import { useEffect, useRef, useState } from "react";
 
 import logo from "@/assets/logo.png";
+import stepDownload from "@/assets/step-download.jpg";
+import stepPromo from "@/assets/step-promo.jpg";
+import stepUpload from "@/assets/step-upload.jpg";
+import { Particles } from "@/components/Particles";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,14 +16,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 
 const PROMO_CODE = "KAJO117";
+const PLATFORM_URL = "https://ultrapari.com";
 
 export const Route = createFileRoute("/terms")({
   head: () => ({
     meta: [
-      { title: "شروط الاشتراك في المسابقة" },
+      { title: "شروط الاشتراك في المسابقة — KAJO ARENA" },
       {
         name: "description",
         content:
@@ -38,6 +43,7 @@ function TermsPage() {
   const [warnOpen, setWarnOpen] = useState(true);
   const [copied, setCopied] = useState(false);
   const [usersOnline, setUsersOnline] = useState(0);
+  const [confirmed, setConfirmed] = useState(false);
 
   useEffect(() => {
     setUsersOnline(120 + Math.floor(Math.random() * 80));
@@ -58,52 +64,55 @@ function TermsPage() {
   };
 
   return (
-    <div dir="rtl" className="min-h-screen bg-background pb-16">
-      <header className="sticky top-0 z-30 border-b border-border/60 bg-card/80 backdrop-blur-md">
+    <div dir="rtl" className="relative min-h-screen overflow-hidden bg-background pb-20">
+      <Particles />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-0 h-96 bg-[radial-gradient(circle_at_50%_0%,color-mix(in_oklab,var(--primary)_14%,transparent),transparent_70%)]" />
+
+      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/40 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-4">
-          <span className="bg-gradient-to-l from-primary to-accent bg-clip-text text-lg font-extrabold text-transparent">
-            KAJO ARENA
-          </span>
-          <span className="flex items-center gap-2 rounded-full border border-border/60 bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground">
+          <span className="gold-text text-lg font-black tracking-wide">KAJO ARENA</span>
+          <span className="glass flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold text-foreground">
             <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
             </span>
             Users online : {usersOnline}
           </span>
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4">
+      <main className="relative z-10 mx-auto max-w-3xl px-4">
         <section className="flex flex-col items-center pt-8">
-          <img
-            src={logo}
-            alt="شعار المسابقة"
-            width={1024}
-            height={1024}
-            loading="lazy"
-            className="w-28 drop-shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
-          />
-          <h1 className="mt-4 text-2xl font-extrabold text-foreground">الشروط</h1>
+          <div className="glass rounded-full p-4">
+            <img
+              src={logo}
+              alt="شعار المسابقة"
+              width={1024}
+              height={1024}
+              loading="lazy"
+              className="w-24 drop-shadow-[0_0_28px_rgba(255,196,80,0.35)]"
+            />
+          </div>
+          <h1 className="gold-text mt-4 text-3xl font-black">الشروط</h1>
+          <div className="mt-3 h-px w-40 bg-gradient-to-l from-transparent via-primary to-transparent" />
         </section>
 
-        <div className="mt-8 space-y-5">
-          <StepCard index={1} title="تحميل منصة Ultrapari">
+        <div className="mt-8 space-y-6">
+          <StepCard index={1} title="تحميل منصة Ultrapari" image={stepDownload}>
             <Button
-              variant="secondary"
-              className="w-full bg-white font-bold text-black hover:bg-white/90"
+              className="w-full border border-border bg-white font-bold text-black hover:bg-white/90"
               asChild
             >
-              <a href="https://ultrapari.com" target="_blank" rel="noopener noreferrer">
+              <a href={PLATFORM_URL} target="_blank" rel="noopener noreferrer">
                 <Download className="size-4" />
                 تحميل
               </a>
             </Button>
           </StepCard>
 
-          <StepCard index={2} title="التسجيل بالبروموكود الخاص بنا">
+          <StepCard index={2} title="التسجيل بالبروموكود الخاص بنا" image={stepPromo}>
             <div className="flex items-center gap-2">
-              <div className="flex-1 rounded-lg border border-dashed border-primary/50 bg-secondary px-4 py-3 text-center text-lg font-extrabold tracking-widest text-primary">
+              <div className="flex-1 rounded-xl border border-dashed border-primary/60 bg-background/40 px-4 py-3 text-center text-lg font-black tracking-[0.25em] text-primary">
                 {PROMO_CODE}
               </div>
               <Button variant="outline" onClick={copyCode} aria-label="نسخ البروموكود">
@@ -112,35 +121,38 @@ function TermsPage() {
               </Button>
             </div>
             <Button className="mt-4 w-full font-bold" asChild>
-              <a href="https://ultrapari.com" target="_blank" rel="noopener noreferrer">
+              <a href={PLATFORM_URL} target="_blank" rel="noopener noreferrer">
                 <UserPlus className="size-4" />
                 التسجيل
               </a>
             </Button>
           </StepCard>
 
-          <StepCard index={3} title="رفع صور التأكيد">
-            <p className="mb-3 text-sm font-bold text-destructive">إجباري</p>
+          <StepCard index={3} title="رفع صور التأكيد" image={stepUpload}>
+            <p className="mb-3 text-sm font-black text-destructive">إجباري</p>
             <div className="grid grid-cols-2 gap-3">
               <UploadBox label="رفع صورة البروموكود" />
               <UploadBox label="رفع صورة الحساب" />
             </div>
-            <Button className="mt-4 w-full font-bold">
+            <Button className="mt-4 w-full font-bold" onClick={() => setConfirmed(true)}>
               <Check className="size-4" />
-              تأكيد
+              {confirmed ? "تم التأكيد" : "تأكيد"}
             </Button>
           </StepCard>
         </div>
       </main>
 
       <Dialog open={warnOpen} onOpenChange={setWarnOpen}>
-        <DialogContent dir="rtl" className="max-w-sm text-right">
+        <DialogContent
+          dir="rtl"
+          className="glass max-w-sm bg-popover/80 text-right backdrop-blur-2xl"
+        >
           <DialogHeader>
-            <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-destructive/15 text-destructive">
+            <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full border border-destructive/40 bg-destructive/15 text-destructive">
               <AlertTriangle className="size-6" />
             </div>
-            <DialogTitle className="text-center">تحذير</DialogTitle>
-            <DialogDescription className="text-center leading-7">
+            <DialogTitle className="gold-text text-center text-xl">تحذير</DialogTitle>
+            <DialogDescription className="text-center leading-7 text-muted-foreground">
               الاشتراك يكون مرة واحدة فقط في المسابقة لكل هاتف، برجاء الالتزام بالشروط للانضمام
               الصحيح للمسابقة وعدم حدوث أي مشاكل في تسجيلك.
             </DialogDescription>
@@ -159,18 +171,28 @@ function TermsPage() {
 function StepCard({
   index,
   title,
+  image,
   children,
 }: {
   index: number;
   title: string;
+  image: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-border/60 bg-card p-5 shadow-lg shadow-black/20">
+    <section className="glass rounded-2xl p-5">
       <div className="mb-4 flex items-center gap-3">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-extrabold text-primary-foreground">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-primary/40 bg-primary/15 text-sm font-black text-primary">
           {index}
         </span>
+        <img
+          src={image}
+          alt={title}
+          width={768}
+          height={768}
+          loading="lazy"
+          className="size-14 shrink-0 rounded-xl border border-border object-cover"
+        />
         <h2 className="text-base font-bold text-card-foreground">{title}</h2>
       </div>
       {children}
@@ -188,7 +210,7 @@ function UploadBox({ label }: { label: string }) {
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="flex aspect-square w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed border-border bg-secondary/60 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+        className="flex aspect-square w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed border-border bg-background/30 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
       >
         {preview ? (
           <img src={preview} alt={label} className="h-full w-full object-cover" />
