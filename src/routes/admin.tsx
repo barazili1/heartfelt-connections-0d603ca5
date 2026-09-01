@@ -122,19 +122,68 @@ function AdminPage() {
       setExportMsg("لا توجد ايديهات مقبولة للتصدير.");
       return;
     }
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text("KAJO ARENA - Approved IDs", 14, 18);
-    doc.setFontSize(11);
-    let y = 30;
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const W = doc.internal.pageSize.getWidth();
+    const H = doc.internal.pageSize.getHeight();
+
+    const drawFrame = () => {
+      doc.setFillColor(10, 10, 12);
+      doc.rect(0, 0, W, H, "F");
+      doc.setDrawColor(214, 174, 92);
+      doc.setLineWidth(1.2);
+      doc.rect(22, 22, W - 44, H - 44);
+      doc.setLineWidth(0.4);
+      doc.rect(29, 29, W - 58, H - 58);
+    };
+
+    let page = 1;
+    drawFrame();
+    doc.setTextColor(240, 194, 90);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(24);
+    doc.text("KAJO ARENA", W / 2, 78, { align: "center" });
+    doc.setFontSize(13);
+    doc.setTextColor(190, 190, 190);
+    doc.setFont("helvetica", "normal");
+    doc.text("Approved Player IDs", W / 2, 100, { align: "center" });
+    doc.setDrawColor(214, 174, 92);
+    doc.setLineWidth(0.8);
+    doc.line(W / 2 - 90, 112, W / 2 + 90, 112);
+    doc.setFontSize(9);
+    doc.setTextColor(140, 140, 140);
+    doc.text(
+      `${new Date().toLocaleDateString("en-GB")}  •  Total: ${approvedIds.length}`,
+      W / 2,
+      130,
+      { align: "center" },
+    );
+
+    let y = 164;
     approvedIds.forEach((id, i) => {
-      if (y > 280) {
+      if (y > H - 70) {
         doc.addPage();
-        y = 20;
+        page += 1;
+        drawFrame();
+        y = 70;
       }
-      doc.text(`${i + 1}. ${id}`, 14, y);
-      y += 7;
+      doc.setFillColor(i % 2 === 0 ? 22 : 16, i % 2 === 0 ? 22 : 16, i % 2 === 0 ? 26 : 20);
+      doc.rect(48, y - 15, W - 96, 26, "F");
+      doc.setTextColor(150, 150, 150);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text(String(i + 1).padStart(2, "0"), 62, y + 2);
+      doc.setTextColor(240, 205, 120);
+      doc.setFont("courier", "bold");
+      doc.setFontSize(13);
+      doc.text(id, W - 62, y + 2, { align: "right" });
+      y += 30;
     });
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(120, 120, 120);
+    doc.text(`Page ${page}`, W / 2, H - 34, { align: "center" });
+
     saveBlob(doc.output("blob"), "approved-ids.pdf");
   };
 
@@ -143,23 +192,93 @@ function AdminPage() {
       setExportMsg("لا توجد ايديهات مقبولة للتصدير.");
       return;
     }
+    const scale = 2;
+    const width = 760;
+    const rowH = 54;
+    const top = 210;
+    const height = top + approvedIds.length * rowH + 90;
     const canvas = document.createElement("canvas");
-    const width = 600;
-    const height = 100 + approvedIds.length * 34;
-    canvas.width = width;
-    canvas.height = height;
+    canvas.width = width * scale;
+    canvas.height = height * scale;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    ctx.fillStyle = "#0b0b0b";
+    ctx.scale(scale, scale);
+
+    // background
+    const bg = ctx.createLinearGradient(0, 0, width, height);
+    bg.addColorStop(0, "#0a0a0c");
+    bg.addColorStop(0.5, "#121014");
+    bg.addColorStop(1, "#08080a");
+    ctx.fillStyle = bg;
     ctx.fillRect(0, 0, width, height);
-    ctx.fillStyle = "#f0c25a";
-    ctx.font = "bold 26px sans-serif";
-    ctx.fillText("KAJO ARENA — Approved IDs", 24, 48);
-    ctx.font = "20px monospace";
-    ctx.fillStyle = "#f6f0e4";
+
+    // gold glow
+    const glow = ctx.createRadialGradient(width / 2, 0, 0, width / 2, 0, 420);
+    glow.addColorStop(0, "rgba(240,194,90,0.20)");
+    glow.addColorStop(1, "rgba(240,194,90,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, width, 420);
+
+    // frames
+    const gold = ctx.createLinearGradient(0, 0, width, 0);
+    gold.addColorStop(0, "#8a6b28");
+    gold.addColorStop(0.5, "#f4d488");
+    gold.addColorStop(1, "#8a6b28");
+    ctx.strokeStyle = gold;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(20, 20, width - 40, height - 40);
+    ctx.lineWidth = 0.7;
+    ctx.strokeRect(29, 29, width - 58, height - 58);
+
+    // header
+    ctx.textAlign = "center";
+    ctx.fillStyle = gold;
+    ctx.font = "bold 40px Georgia, serif";
+    ctx.fillText("KAJO ARENA", width / 2, 100);
+    ctx.fillStyle = "#cfcfcf";
+    ctx.font = "18px Georgia, serif";
+    ctx.fillText("APPROVED PLAYER IDS", width / 2, 132);
+    ctx.strokeStyle = gold;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(width / 2 - 110, 150);
+    ctx.lineTo(width / 2 + 110, 150);
+    ctx.stroke();
+    ctx.fillStyle = "#8f8f8f";
+    ctx.font = "14px sans-serif";
+    ctx.fillText(
+      `${new Date().toLocaleDateString("en-GB")}   •   Total: ${approvedIds.length}`,
+      width / 2,
+      176,
+    );
+
+    // rows
     approvedIds.forEach((id, i) => {
-      ctx.fillText(`${i + 1}.  ${id}`, 24, 92 + i * 34);
+      const y = top + i * rowH;
+      ctx.fillStyle = i % 2 === 0 ? "rgba(255,255,255,0.045)" : "rgba(255,255,255,0.015)";
+      roundRect(ctx, 52, y, width - 104, rowH - 12, 12);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(240,194,90,0.18)";
+      ctx.lineWidth = 1;
+      roundRect(ctx, 52, y, width - 104, rowH - 12, 12);
+      ctx.stroke();
+
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#8a8a8a";
+      ctx.font = "bold 15px sans-serif";
+      ctx.fillText(String(i + 1).padStart(2, "0"), 74, y + 28);
+
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#f2d391";
+      ctx.font = "bold 22px 'Courier New', monospace";
+      ctx.fillText(id, width - 74, y + 29);
     });
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(240,194,90,0.55)";
+    ctx.font = "13px sans-serif";
+    ctx.fillText("KAJO ARENA  •  Contest Winners List", width / 2, height - 50);
+
     canvas.toBlob((blob) => {
       if (blob) saveBlob(blob, "approved-ids.png");
       else setExportMsg("تعذر إنشاء الصورة، جرّب تصدير PDF.");
@@ -361,6 +480,23 @@ function AdminPage() {
       )}
     </div>
   );
+}
+
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
 }
 
 function ProofThumb({
