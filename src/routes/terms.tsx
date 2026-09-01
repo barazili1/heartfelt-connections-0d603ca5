@@ -145,7 +145,6 @@ function TermsPage() {
       <Dialog open={warnOpen} onOpenChange={setWarnOpen}>
         <DialogContent
           dir="rtl"
-          showCloseButton={false}
           className="overflow-hidden border-primary/30 bg-popover/70 p-0 text-right shadow-[0_30px_80px_-20px_color-mix(in_oklab,var(--primary)_45%,transparent)] backdrop-blur-2xl sm:max-w-md"
         >
           <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_50%_0%,color-mix(in_oklab,var(--primary)_22%,transparent),transparent_72%)]" />
