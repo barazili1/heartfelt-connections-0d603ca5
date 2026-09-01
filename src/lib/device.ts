@@ -1,6 +1,8 @@
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
 import { supabase } from "@/integrations/supabase/client";
+import { getHardwareFingerprint } from "@/lib/hardware-fingerprint";
+
 
 const LEGACY_KEY = "kajo_device_id";
 const CACHE_KEY = "kajo_fp";
