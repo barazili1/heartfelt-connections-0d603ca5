@@ -5,7 +5,6 @@ import { getHardwareFingerprint } from "@/lib/hardware-fingerprint";
 
 const LEGACY_KEY = "kajo_device_id";
 const CACHE_KEY = "kajo_fp";
-const INSTALL_KEY = "kajo_install_id";
 const ADMIN_KEY = "kajo_admin_ok";
 
 /** Admin device fingerprints allowed to open the admin page. */
@@ -37,11 +36,7 @@ async function getBrowserFingerprint(): Promise<string> {
   return browserFpPromise;
 }
 
-/**
- * Telegram Mini App identity. Inside Telegram every device reports almost
- * identical hardware traits, so the Telegram user id is the only value that
- * is truly unique per device/account and never changes.
- */
+/** Telegram identity is retained only to detect submissions made by older app versions. */
 function getTelegramId(): string {
   if (typeof window === "undefined") return "";
   const tg = (
@@ -53,38 +48,16 @@ function getTelegramId(): string {
   return id ? `tg${id}` : "";
 }
 
-/** Persistent per-install id, kept in localStorage + a long-lived cookie. */
-function getInstallId(): string {
-  if (typeof window === "undefined") return "";
-  const fromCookie = document.cookie.match(/(?:^|;\s*)kajo_install_id=([^;]+)/)?.[1] ?? "";
-  let id = window.localStorage.getItem(INSTALL_KEY) ?? fromCookie;
-  if (!id) {
-    id =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID().replace(/-/g, "")
-        : Math.random().toString(36).slice(2) + Date.now().toString(36);
-  }
-  try {
-    window.localStorage.setItem(INSTALL_KEY, id);
-    document.cookie = `kajo_install_id=${id}; path=/; max-age=31536000; SameSite=Lax`;
-  } catch {
-    /* storage may be blocked */
-  }
-  return id;
-}
-
-/** The stable device id used to enforce one submission per device. */
+/**
+ * Hardware-derived id used to enforce one submission per physical device.
+ * It deliberately excludes Telegram identity, cookies, localStorage, IP and
+ * browser fingerprints, so changing account/browser/network does not reset it.
+ */
 export async function getDeviceId(): Promise<string> {
   if (typeof window === "undefined") return "";
-  const telegram = getTelegramId();
-  if (telegram) return telegram;
-  const hardware = await getHardwareFingerprint()
+  return getHardwareFingerprint()
     .then((result) => result.id)
     .catch(() => "");
-  const install = getInstallId();
-  const base = hardware || (await getBrowserFingerprint());
-  if (!base) return install;
-  return `${base.slice(0, 16)}${install.slice(0, 16)}`;
 }
 
 export function getLegacyDeviceId(): string | null {
@@ -126,7 +99,10 @@ export type DeviceInfo = {
 export async function resolveDevice(): Promise<DeviceInfo> {
   const [deviceId, browserId] = await Promise.all([getDeviceId(), getBrowserFingerprint()]);
   const legacy = getLegacyDeviceId();
-  const candidates = [...new Set([deviceId, browserId, legacy].filter((v): v is string => !!v))];
+  const telegram = getTelegramId();
+  const candidates = [
+    ...new Set([deviceId, telegram, browserId, legacy].filter((v): v is string => !!v)),
+  ];
 
   let isAdmin = hasAdminAccess() || candidates.some((c) => ADMIN_DEVICE_IDS.includes(c));
 

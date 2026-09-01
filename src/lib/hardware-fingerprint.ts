@@ -22,6 +22,8 @@ export type HardwareTraits = {
   timezone: string;
   languages: string;
   fonts: string;
+  touchPoints: number;
+  displayMode: string;
 };
 
 export type HardwareFingerprint = {
@@ -63,6 +65,8 @@ const EMPTY_TRAITS: HardwareTraits = {
   timezone: "",
   languages: "",
   fonts: "",
+  touchPoints: 0,
+  displayMode: "",
 };
 
 async function sha256(input: string): Promise<string> {
@@ -155,15 +159,21 @@ function collectFonts(): string {
 /** Reduces GPU strings to a coarse family every engine agrees on. */
 function gpuFamily(vendor: string, renderer: string): string {
   const text = `${vendor} ${renderer}`.toLowerCase();
-  const brand =
-    /nvidia|geforce|rtx|gtx/.test(text) ? "nvidia" :
-    /amd|radeon|ati/.test(text) ? "amd" :
-    /intel|iris|uhd|hd graphics/.test(text) ? "intel" :
-    /apple|m1|m2|m3/.test(text) ? "apple" :
-    /adreno/.test(text) ? "adreno" :
-    /mali/.test(text) ? "mali" :
-    /powervr/.test(text) ? "powervr" :
-    "generic";
+  const brand = /nvidia|geforce|rtx|gtx/.test(text)
+    ? "nvidia"
+    : /amd|radeon|ati/.test(text)
+      ? "amd"
+      : /intel|iris|uhd|hd graphics/.test(text)
+        ? "intel"
+        : /apple|m1|m2|m3/.test(text)
+          ? "apple"
+          : /adreno/.test(text)
+            ? "adreno"
+            : /mali/.test(text)
+              ? "mali"
+              : /powervr/.test(text)
+                ? "powervr"
+                : "generic";
   const model = text.match(/(rtx|gtx|radeon|iris|adreno|mali|apple)[a-z0-9 -]{0,12}/)?.[0] ?? "";
   return `${brand}:${model.replace(/\s+/g, "")}`;
 }
@@ -206,20 +216,26 @@ export function getHardwareFingerprint(force = false): Promise<HardwareFingerpri
         pixelDepth: window.screen.pixelDepth ?? 0,
         devicePixelRatio: Math.round((window.devicePixelRatio ?? 1) * 100) / 100,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? "",
-        languages: [...new Set((navigator.languages ?? [navigator.language]).map((l) => l.split("-")[0]))]
+        languages: [
+          ...new Set((navigator.languages ?? [navigator.language]).map((l) => l.split("-")[0])),
+        ]
           .sort()
           .join(","),
         fonts: collectFonts(),
+        touchPoints: navigator.maxTouchPoints ?? 0,
+        displayMode: window.matchMedia("(display-mode: standalone)").matches
+          ? "standalone"
+          : "browser",
       };
 
-      // Only signals that every rendering engine reports identically on the
-      // same physical machine are hashed. GPU renderer strings, deviceMemory,
-      // navigator.languages, devicePixelRatio and the installed-font probe all
-      // differ between Chrome / Firefox / Safari, so they are display-only.
+      // Values are deliberately coarse to remain stable across browser and
+      // network changes while still separating different hardware profiles.
       const stable = [
         `gpu=${gpuFamily(gpuVendor, gpuRenderer)}`,
         `screen=${Math.max(window.screen.width, window.screen.height)}x${Math.min(window.screen.width, window.screen.height)}`,
         `depth=${traits.colorDepth}`,
+        `cores=${traits.cpuCores}`,
+        `touch=${traits.touchPoints}`,
         `tz=${traits.timezone}`,
         `platform=${platformFamily()}`,
       ];
