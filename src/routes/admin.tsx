@@ -326,7 +326,7 @@ function ProofThumb({
   onOpen,
 }: {
   label: string;
-  src?: string;
+  src?: string | undefined;
   onOpen: (src: string) => void;
 }) {
   return (
