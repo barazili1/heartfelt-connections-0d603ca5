@@ -255,11 +255,7 @@ function TermsPage() {
                 {error && (
                   <p className="mt-3 text-center text-sm font-bold text-destructive">{error}</p>
                 )}
-                <Button
-                  className="mt-4 w-full font-bold"
-                  onClick={submit}
-                  disabled={submitting}
-                >
+                <Button className="mt-4 w-full font-bold" onClick={submit} disabled={submitting}>
                   {submitting ? (
                     <Loader2 className="size-4 animate-spin" />
                   ) : (
@@ -345,9 +341,7 @@ function StatusCard({ status }: { status: SubmissionStatus }) {
       </div>
       <h2 className="gold-text text-xl font-black">{content.title}</h2>
       <p className="mt-2 text-sm leading-7 text-muted-foreground">{content.text}</p>
-      <p className="mt-4 text-xs text-muted-foreground">
-        الاشتراك مسموح مرة واحدة فقط لكل جهاز.
-      </p>
+      <p className="mt-4 text-xs text-muted-foreground">الاشتراك مسموح مرة واحدة فقط لكل جهاز.</p>
     </section>
   );
 }
