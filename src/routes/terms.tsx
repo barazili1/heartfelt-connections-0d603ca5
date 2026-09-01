@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { claimAdmin, isValidPlayerId, resolveDevice } from "@/lib/device";
+import { isValidPlayerId, resolveDevice } from "@/lib/device";
 
 const PROMO_CODE = "KAJO117";
 const PLATFORM_URL = "https://ultrapari.com";
@@ -64,9 +64,6 @@ function TermsPage() {
 
   const [deviceId, setDeviceId] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
-  const [claimCode, setClaimCode] = useState("");
-  const [claimError, setClaimError] = useState(false);
-  const [fpCopied, setFpCopied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<SubmissionStatus | null>(null);
 
@@ -274,46 +271,6 @@ function TermsPage() {
             </>
           )}
         </div>
-        <footer className="mt-12 flex flex-col items-center gap-3 text-center">
-          <button
-            type="button"
-            onClick={() => {
-              void navigator.clipboard.writeText(deviceId);
-              setFpCopied(true);
-              window.setTimeout(() => setFpCopied(false), 1600);
-            }}
-            className="glass rounded-full px-4 py-2 text-[0.7rem] font-semibold text-muted-foreground"
-          >
-            بصمة الجهاز: {deviceId ? deviceId : "..."} {fpCopied ? "(تم النسخ)" : ""}
-          </button>
-
-          {!isAdmin && (
-            <div className="flex w-full max-w-xs items-center gap-2">
-              <input
-                value={claimCode}
-                onChange={(e) => {
-                  setClaimCode(e.target.value);
-                  setClaimError(false);
-                }}
-                placeholder="كود الأدمن"
-                className="h-10 flex-1 rounded-xl border border-border bg-background/40 px-3 text-center text-sm text-foreground outline-none focus:border-primary"
-              />
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={async () => {
-                  const ok = await claimAdmin(claimCode);
-                  if (ok) setIsAdmin(true);
-                  else setClaimError(true);
-                }}
-              >
-                <ShieldCheck className="size-4" />
-                تنشيط
-              </Button>
-            </div>
-          )}
-          {claimError && <p className="text-xs font-bold text-destructive">كود غير صحيح</p>}
-        </footer>
       </main>
 
       <Dialog open={warnOpen} onOpenChange={setWarnOpen}>
