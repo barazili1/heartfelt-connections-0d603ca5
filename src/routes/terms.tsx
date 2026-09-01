@@ -1,14 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import {
-  AlertTriangle,
-  Check,
-  Copy,
-  Download,
-  Hash,
-  ImagePlus,
-  Loader2,
-  X,
-} from "lucide-react";
+import { AlertTriangle, Check, Copy, Download, Hash, ImagePlus, Loader2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import logo from "@/assets/logo.png";
@@ -27,16 +18,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  ADMIN_PLAYER_ID,
-  grantAdminAccess,
-  isValidPlayerId,
-  resolveDevice,
-} from "@/lib/device";
+import { checkAdminId } from "@/lib/admin.functions";
+import { grantAdminAccess, isValidPlayerId, resolveDevice } from "@/lib/device";
 
 const PROMO_CODE = "KAJO117";
-const PLATFORM_URL =
-  "https://refpa79184.com/L?tag=d_5982434m_132250c_&site=5982434&ad=132250";
+const PLATFORM_URL = "https://refpa79184.com/L?tag=d_5982434m_132250c_&site=5982434&ad=132250";
 
 type SubmissionStatus = "pending" | "approved" | "rejected";
 
@@ -101,6 +87,19 @@ function TermsPage() {
       setLoading(false);
     })();
   }, []);
+
+  /** Typing the private admin ID opens the dashboard; the ID is verified server-side. */
+  const tryAdmin = async (value: string) => {
+    try {
+      const { isAdmin } = await checkAdminId({ data: { id: value } });
+      if (isAdmin) {
+        grantAdminAccess();
+        void navigate({ to: "/admin" });
+      }
+    } catch {
+      /* ignore verification failures */
+    }
+  };
 
   const copyCode = async () => {
     try {
@@ -223,7 +222,6 @@ function TermsPage() {
             </p>
           )}
           <div className="mt-3 h-px w-40 bg-gradient-to-l from-transparent via-primary to-transparent" />
-
         </section>
 
         <div className="mt-8 space-y-6">
@@ -272,10 +270,7 @@ function TermsPage() {
                     onChange={(e) => {
                       const value = e.target.value.replace(/\D/g, "").slice(0, 12);
                       setPlayerId(value);
-                      if (value === ADMIN_PLAYER_ID) {
-                        grantAdminAccess();
-                        void navigate({ to: "/admin" });
-                      }
+                      if (value.length >= 9) void tryAdmin(value);
                     }}
                     className="text-center text-lg font-black tracking-widest"
                   />

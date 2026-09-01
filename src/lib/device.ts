@@ -8,9 +8,6 @@ const CACHE_KEY = "kajo_fp";
 const INSTALL_KEY = "kajo_install_id";
 const ADMIN_KEY = "kajo_admin_ok";
 
-/** Typing the player ID grants access to the admin dashboard. */
-export const ADMIN_PLAYER_ID = "17222643892";
-
 /** Admin device fingerprints allowed to open the admin page. */
 export const ADMIN_DEVICE_IDS = [
   "HeDxAvC2QwMgdF0iFP2g",
@@ -47,9 +44,11 @@ async function getBrowserFingerprint(): Promise<string> {
  */
 function getTelegramId(): string {
   if (typeof window === "undefined") return "";
-  const tg = (window as unknown as {
-    Telegram?: { WebApp?: { initDataUnsafe?: { user?: { id?: number } } } };
-  }).Telegram;
+  const tg = (
+    window as unknown as {
+      Telegram?: { WebApp?: { initDataUnsafe?: { user?: { id?: number } } } };
+    }
+  ).Telegram;
   const id = tg?.WebApp?.initDataUnsafe?.user?.id;
   return id ? `tg${id}` : "";
 }
