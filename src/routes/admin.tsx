@@ -95,19 +95,54 @@ function AdminPage() {
 
   const approvedIds = rows.filter((r) => r.status === "approved").map((r) => r.player_id);
 
+  const [exportMsg, setExportMsg] = useState<string | null>(null);
+
+  /** Downloads a blob; falls back to opening a new tab when downloads are blocked (iframe/mobile). */
+  const saveBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    try {
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.rel = "noopener";
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setExportMsg(`تم تصدير ${filename}`);
+    } catch {
+      window.open(url, "_blank", "noopener");
+      setExportMsg("تم فتح الملف في تبويب جديد");
+    }
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  };
+
   const exportPdf = () => {
+    if (!approvedIds.length) {
+      setExportMsg("لا توجد ايديهات مقبولة للتصدير.");
+      return;
+    }
     const doc = new jsPDF();
     doc.setFontSize(16);
     doc.text("KAJO ARENA - Approved IDs", 14, 18);
     doc.setFontSize(11);
+    let y = 30;
     approvedIds.forEach((id, i) => {
-      doc.text(`${i + 1}. ${id}`, 14, 30 + i * 7);
-      if ((30 + i * 7) % 280 === 0) doc.addPage();
+      if (y > 280) {
+        doc.addPage();
+        y = 20;
+      }
+      doc.text(`${i + 1}. ${id}`, 14, y);
+      y += 7;
     });
-    doc.save("approved-ids.pdf");
+    saveBlob(doc.output("blob"), "approved-ids.pdf");
   };
 
   const exportImage = () => {
+    if (!approvedIds.length) {
+      setExportMsg("لا توجد ايديهات مقبولة للتصدير.");
+      return;
+    }
     const canvas = document.createElement("canvas");
     const width = 600;
     const height = 100 + approvedIds.length * 34;
@@ -125,10 +160,10 @@ function AdminPage() {
     approvedIds.forEach((id, i) => {
       ctx.fillText(`${i + 1}.  ${id}`, 24, 92 + i * 34);
     });
-    const link = document.createElement("a");
-    link.href = canvas.toDataURL("image/png");
-    link.download = "approved-ids.png";
-    link.click();
+    canvas.toBlob((blob) => {
+      if (blob) saveBlob(blob, "approved-ids.png");
+      else setExportMsg("تعذر إنشاء الصورة، جرّب تصدير PDF.");
+    }, "image/png");
   };
 
   if (deviceId === null || isAdmin === null) return null;
@@ -297,6 +332,9 @@ function AdminPage() {
                       تصدير صورة
                     </Button>
                   </div>
+                  {exportMsg && (
+                    <p className="mt-3 text-center text-sm font-bold text-primary">{exportMsg}</p>
+                  )}
                 </section>
               </TabsContent>
             </>
