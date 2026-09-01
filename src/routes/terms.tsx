@@ -80,7 +80,9 @@ function TermsPage() {
       const { data } = await supabase
         .from("submissions")
         .select("status")
-        .in("device_id", candidates.length ? candidates : [id])
+        .or(
+          `hardware_id.eq.${id},device_id.in.(${(candidates.length ? candidates : [id]).join(",")})`,
+        )
         .limit(1);
       const first = data?.[0];
       if (first) setStatus(first.status as SubmissionStatus);
