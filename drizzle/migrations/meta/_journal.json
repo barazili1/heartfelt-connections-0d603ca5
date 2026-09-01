@@ -29,6 +29,13 @@
       "when": 1788271750525,
       "tag": "0003_lock_device_to_single_image_pair",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788271788775,
+      "tag": "0004_enforce_one_submission_per_hardware_fingerprint",
+      "breakpoints": true
     }
   ]
 }
