@@ -332,6 +332,9 @@ function AdminPage() {
                       تصدير صورة
                     </Button>
                   </div>
+                  {exportMsg && (
+                    <p className="mt-3 text-center text-sm font-bold text-primary">{exportMsg}</p>
+                  )}
                 </section>
               </TabsContent>
             </>
