@@ -1,14 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import jsPDF from "jspdf";
-import {
-  ArrowRight,
-  Check,
-  FileDown,
-  ImageDown,
-  Loader2,
-  ShieldAlert,
-  X,
-} from "lucide-react";
+import { ArrowRight, Check, FileDown, ImageDown, Loader2, ShieldAlert, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import logo from "@/assets/logo.png";
@@ -289,14 +281,15 @@ function AdminPage() {
 
   if (!isAdmin) {
     return (
-      <div dir="rtl" className="relative flex min-h-screen items-center justify-center bg-background px-4">
+      <div
+        dir="rtl"
+        className="relative flex min-h-screen items-center justify-center bg-background px-4"
+      >
         <Particles />
         <div className="glass relative z-10 max-w-sm rounded-2xl p-8 text-center">
           <ShieldAlert className="mx-auto size-10 text-destructive" />
           <h1 className="gold-text mt-4 text-xl font-black">غير مصرح لك</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            هذه الصفحة متاحة لأجهزة الإدارة فقط.
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">هذه الصفحة متاحة لأجهزة الإدارة فقط.</p>
           <Button className="mt-6 w-full font-bold" asChild>
             <Link to="/terms">العودة للشروط</Link>
           </Button>

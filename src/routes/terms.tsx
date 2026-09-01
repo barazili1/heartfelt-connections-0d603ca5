@@ -1,14 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import {
-  AlertTriangle,
-  Check,
-  Copy,
-  Download,
-  Hash,
-  ImagePlus,
-  Loader2,
-  X,
-} from "lucide-react";
+import { AlertTriangle, Check, Copy, Download, Hash, ImagePlus, Loader2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import logo from "@/assets/logo.png";
@@ -31,8 +22,7 @@ import { checkAdminId } from "@/lib/admin.functions";
 import { grantAdminAccess, isValidPlayerId, resolveDevice } from "@/lib/device";
 
 const PROMO_CODE = "KAJO117";
-const PLATFORM_URL =
-  "https://refpa79184.com/L?tag=d_5982434m_132250c_&site=5982434&ad=132250";
+const PLATFORM_URL = "https://refpa79184.com/L?tag=d_5982434m_132250c_&site=5982434&ad=132250";
 
 type SubmissionStatus = "pending" | "approved" | "rejected";
 
@@ -232,7 +222,6 @@ function TermsPage() {
             </p>
           )}
           <div className="mt-3 h-px w-40 bg-gradient-to-l from-transparent via-primary to-transparent" />
-
         </section>
 
         <div className="mt-8 space-y-6">

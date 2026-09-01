@@ -44,9 +44,11 @@ async function getBrowserFingerprint(): Promise<string> {
  */
 function getTelegramId(): string {
   if (typeof window === "undefined") return "";
-  const tg = (window as unknown as {
-    Telegram?: { WebApp?: { initDataUnsafe?: { user?: { id?: number } } } };
-  }).Telegram;
+  const tg = (
+    window as unknown as {
+      Telegram?: { WebApp?: { initDataUnsafe?: { user?: { id?: number } } } };
+    }
+  ).Telegram;
   const id = tg?.WebApp?.initDataUnsafe?.user?.id;
   return id ? `tg${id}` : "";
 }
