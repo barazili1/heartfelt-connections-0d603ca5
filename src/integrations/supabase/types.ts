@@ -14,6 +14,21 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_devices: {
+        Row: {
+          created_at: string
+          fingerprint: string
+        }
+        Insert: {
+          created_at?: string
+          fingerprint: string
+        }
+        Update: {
+          created_at?: string
+          fingerprint?: string
+        }
+        Relationships: []
+      }
       submissions: {
         Row: {
           account_image_url: string

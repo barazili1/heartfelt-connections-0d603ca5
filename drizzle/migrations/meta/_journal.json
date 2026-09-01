@@ -15,6 +15,13 @@
       "when": 1788269366902,
       "tag": "0001_proofs_storage_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788269822218,
+      "tag": "0002_create_admin_devices",
+      "breakpoints": true
     }
   ]
 }
