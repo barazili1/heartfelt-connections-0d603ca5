@@ -128,6 +128,21 @@ function FingerprintPage() {
           )}
         </section>
 
+        <section className="glass mt-6 rounded-2xl p-6">
+          <h2 className="gold-text text-lg font-black">ليه البصمة ثابتة؟</h2>
+          <ul className="mt-3 space-y-2 text-sm leading-7 text-muted-foreground">
+            <li>• البصمة محسوبة من العتاد فقط: كرت الرسوميات، المعالج، الرام، الشاشة، والخطوط.</li>
+            <li>
+              • مستبعد تمامًا: الـ User Agent، اسم المتصفح، رسم الـ Canvas، الصوت، وأي بيانات شبكة
+              أو IP.
+            </li>
+            <li>• عشان كده الـ ID زي ما هو في Chrome و Firefox و Safari و Edge وفي وضع التصفح الخاص.</li>
+            <li>• تشغيل VPN أو تغيير الشبكة لا يؤثر لأن الشبكة مش داخلة في الهاش أصلًا.</li>
+          </ul>
+        </section>
+
+
+
         {traits && (
           <section className="glass mt-6 overflow-hidden rounded-2xl">
             <table className="w-full text-right text-sm">
