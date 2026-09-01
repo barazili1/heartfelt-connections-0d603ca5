@@ -1,7 +1,7 @@
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
 import { supabase } from "@/integrations/supabase/client";
-import { getHardwareFingerprint } from "@/lib/hardware-fingerprint";
+import { generateDeviceFingerprint } from "@/lib/device-fingerprint";
 
 const LEGACY_KEY = "kajo_device_id";
 const CACHE_KEY = "kajo_fp";
@@ -49,14 +49,15 @@ function getTelegramId(): string {
 }
 
 /**
- * Hardware-derived id used to enforce one submission per physical device.
- * It deliberately excludes Telegram identity, cookies, localStorage, IP and
- * browser fingerprints, so changing account/browser/network does not reset it.
+ * High-entropy device/browser fingerprint used to enforce one submission.
+ * It combines FingerprintJS with hardware, GPU, display, canvas and audio
+ * signals so two devices of the same model do not collapse to one coarse id.
+ * Telegram identity, IP and VPN state are deliberately excluded.
  */
 export async function getDeviceId(): Promise<string> {
   if (typeof window === "undefined") return "";
-  return getHardwareFingerprint()
-    .then((result) => result.id)
+  return generateDeviceFingerprint()
+    .then((result) => result.fingerprint)
     .catch(() => "");
 }
 
