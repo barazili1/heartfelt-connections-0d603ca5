@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as FingerprintRouteImport } from './routes/fingerprint'
 import { Route as TermsRouteImport } from './routes/terms'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +24,11 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FingerprintRoute = FingerprintRouteImport.update({
+  id: '/fingerprint',
+  path: '/fingerprint',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -32,30 +38,34 @@ const TermsRoute = TermsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/fingerprint': typeof FingerprintRoute
   '/terms': typeof TermsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/fingerprint': typeof FingerprintRoute
   '/terms': typeof TermsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/fingerprint': typeof FingerprintRoute
   '/terms': typeof TermsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/terms'
+  fullPaths: '/' | '/admin' | '/fingerprint' | '/terms'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/terms'
-  id: '__root__' | '/' | '/admin' | '/terms'
+  to: '/' | '/admin' | '/fingerprint' | '/terms'
+  id: '__root__' | '/' | '/admin' | '/fingerprint' | '/terms'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  FingerprintRoute: typeof FingerprintRoute
   TermsRoute: typeof TermsRoute
 }
 
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/fingerprint': {
+      id: '/fingerprint'
+      path: '/fingerprint'
+      fullPath: '/fingerprint'
+      preLoaderRoute: typeof FingerprintRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  FingerprintRoute: FingerprintRoute,
   TermsRoute: TermsRoute,
 }
 export const routeTree = rootRouteImport

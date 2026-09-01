@@ -185,7 +185,16 @@ function TermsPage() {
             />
           </div>
           <h1 className="gold-text mt-4 text-3xl font-black">الشروط</h1>
+          {deviceId && (
+            <p
+              dir="ltr"
+              className="glass mt-3 rounded-full px-4 py-1.5 text-[0.7rem] font-mono tracking-wider text-muted-foreground"
+            >
+              {deviceId}
+            </p>
+          )}
           <div className="mt-3 h-px w-40 bg-gradient-to-l from-transparent via-primary to-transparent" />
+
         </section>
 
         <div className="mt-8 space-y-6">
