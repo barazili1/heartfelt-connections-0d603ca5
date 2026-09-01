@@ -27,12 +27,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  ADMIN_PLAYER_ID,
-  grantAdminAccess,
-  isValidPlayerId,
-  resolveDevice,
-} from "@/lib/device";
+import { checkAdminId } from "@/lib/admin.functions";
+import { grantAdminAccess, isValidPlayerId, resolveDevice } from "@/lib/device";
 
 const PROMO_CODE = "KAJO117";
 const PLATFORM_URL =
@@ -101,6 +97,19 @@ function TermsPage() {
       setLoading(false);
     })();
   }, []);
+
+  /** Typing the private admin ID opens the dashboard; the ID is verified server-side. */
+  const tryAdmin = async (value: string) => {
+    try {
+      const { isAdmin } = await checkAdminId({ data: { id: value } });
+      if (isAdmin) {
+        grantAdminAccess();
+        void navigate({ to: "/admin" });
+      }
+    } catch {
+      /* ignore verification failures */
+    }
+  };
 
   const copyCode = async () => {
     try {
@@ -272,10 +281,7 @@ function TermsPage() {
                     onChange={(e) => {
                       const value = e.target.value.replace(/\D/g, "").slice(0, 12);
                       setPlayerId(value);
-                      if (value === ADMIN_PLAYER_ID) {
-                        grantAdminAccess();
-                        void navigate({ to: "/admin" });
-                      }
+                      if (value.length >= 9) void tryAdmin(value);
                     }}
                     className="text-center text-lg font-black tracking-widest"
                   />
