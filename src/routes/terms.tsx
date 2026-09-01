@@ -91,7 +91,8 @@ function TermsPage() {
         .select("status")
         .in("device_id", candidates.length ? candidates : [id])
         .limit(1);
-      if (data && data.length > 0) setStatus(data[0].status as SubmissionStatus);
+      const first = data?.[0];
+      if (first) setStatus(first.status as SubmissionStatus);
       setLoading(false);
     })();
   }, []);
