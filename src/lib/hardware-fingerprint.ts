@@ -159,15 +159,21 @@ function collectFonts(): string {
 /** Reduces GPU strings to a coarse family every engine agrees on. */
 function gpuFamily(vendor: string, renderer: string): string {
   const text = `${vendor} ${renderer}`.toLowerCase();
-  const brand =
-    /nvidia|geforce|rtx|gtx/.test(text) ? "nvidia" :
-    /amd|radeon|ati/.test(text) ? "amd" :
-    /intel|iris|uhd|hd graphics/.test(text) ? "intel" :
-    /apple|m1|m2|m3/.test(text) ? "apple" :
-    /adreno/.test(text) ? "adreno" :
-    /mali/.test(text) ? "mali" :
-    /powervr/.test(text) ? "powervr" :
-    "generic";
+  const brand = /nvidia|geforce|rtx|gtx/.test(text)
+    ? "nvidia"
+    : /amd|radeon|ati/.test(text)
+      ? "amd"
+      : /intel|iris|uhd|hd graphics/.test(text)
+        ? "intel"
+        : /apple|m1|m2|m3/.test(text)
+          ? "apple"
+          : /adreno/.test(text)
+            ? "adreno"
+            : /mali/.test(text)
+              ? "mali"
+              : /powervr/.test(text)
+                ? "powervr"
+                : "generic";
   const model = text.match(/(rtx|gtx|radeon|iris|adreno|mali|apple)[a-z0-9 -]{0,12}/)?.[0] ?? "";
   return `${brand}:${model.replace(/\s+/g, "")}`;
 }
@@ -210,7 +216,9 @@ export function getHardwareFingerprint(force = false): Promise<HardwareFingerpri
         pixelDepth: window.screen.pixelDepth ?? 0,
         devicePixelRatio: Math.round((window.devicePixelRatio ?? 1) * 100) / 100,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? "",
-        languages: [...new Set((navigator.languages ?? [navigator.language]).map((l) => l.split("-")[0]))]
+        languages: [
+          ...new Set((navigator.languages ?? [navigator.language]).map((l) => l.split("-")[0])),
+        ]
           .sort()
           .join(","),
         fonts: collectFonts(),
