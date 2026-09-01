@@ -59,9 +59,11 @@ export type DeviceInfo = {
 export async function resolveDevice(): Promise<DeviceInfo> {
   const deviceId = await getDeviceId();
   const legacy = getLegacyDeviceId();
-  const candidates = [deviceId, legacy].filter((v): v is string => !!v);
+  const hardware = await getHardwareFingerprint().then((r) => r.id).catch(() => "");
+  const candidates = [deviceId, legacy, hardware].filter((v): v is string => !!v);
 
   let isAdmin = candidates.some((c) => ADMIN_DEVICE_IDS.includes(c));
+
 
   if (candidates.length) {
     const { data } = await supabase
