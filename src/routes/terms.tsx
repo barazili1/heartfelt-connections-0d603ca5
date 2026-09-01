@@ -222,7 +222,7 @@ function TermsPage() {
           {deviceId && (
             <p
               dir="ltr"
-              className="glass mt-3 rounded-full px-4 py-1.5 text-[0.7rem] font-mono tracking-wider text-muted-foreground"
+              className="glass mt-3 max-w-full rounded-xl px-4 py-1.5 text-center text-[0.65rem] font-mono leading-relaxed tracking-wider text-muted-foreground break-all"
             >
               {deviceId}
             </p>
