@@ -152,6 +152,34 @@ function collectFonts(): string {
   }
 }
 
+/** Reduces GPU strings to a coarse family every engine agrees on. */
+function gpuFamily(vendor: string, renderer: string): string {
+  const text = `${vendor} ${renderer}`.toLowerCase();
+  const brand =
+    /nvidia|geforce|rtx|gtx/.test(text) ? "nvidia" :
+    /amd|radeon|ati/.test(text) ? "amd" :
+    /intel|iris|uhd|hd graphics/.test(text) ? "intel" :
+    /apple|m1|m2|m3/.test(text) ? "apple" :
+    /adreno/.test(text) ? "adreno" :
+    /mali/.test(text) ? "mali" :
+    /powervr/.test(text) ? "powervr" :
+    "generic";
+  const model = text.match(/(rtx|gtx|radeon|iris|adreno|mali|apple)[a-z0-9 -]{0,12}/)?.[0] ?? "";
+  return `${brand}:${model.replace(/\s+/g, "")}`;
+}
+
+/** Coarse OS family from userAgentData/platform; identical across browsers. */
+function platformFamily(): string {
+  const nav = navigator as unknown as { userAgentData?: { platform?: string }; platform?: string };
+  const raw = `${nav.userAgentData?.platform ?? ""} ${nav.platform ?? ""}`.toLowerCase();
+  if (/win/.test(raw)) return "windows";
+  if (/android/.test(raw)) return "android";
+  if (/iphone|ipad|ipod|ios/.test(raw)) return "ios";
+  if (/mac/.test(raw)) return "macos";
+  if (/linux|x11/.test(raw)) return "linux";
+  return "unknown";
+}
+
 let cached: Promise<HardwareFingerprint> | null = null;
 
 /** Collects hardware-only traits and returns the cross-browser device id. */
@@ -184,11 +212,18 @@ export function getHardwareFingerprint(force = false): Promise<HardwareFingerpri
         fonts: collectFonts(),
       };
 
-      // Normalized + sorted payload → identical across browsers on one machine.
-      const payload = Object.entries(traits)
-        .map(([key, value]) => `${key}=${String(value).toLowerCase().trim()}`)
-        .sort()
-        .join("|");
+      // Only signals that every rendering engine reports identically on the
+      // same physical machine are hashed. GPU renderer strings, deviceMemory,
+      // navigator.languages, devicePixelRatio and the installed-font probe all
+      // differ between Chrome / Firefox / Safari, so they are display-only.
+      const stable = [
+        `gpu=${gpuFamily(gpuVendor, gpuRenderer)}`,
+        `screen=${Math.max(window.screen.width, window.screen.height)}x${Math.min(window.screen.width, window.screen.height)}`,
+        `depth=${traits.colorDepth}`,
+        `tz=${traits.timezone}`,
+        `platform=${platformFamily()}`,
+      ];
+      const payload = stable.sort().join("|");
 
       return { id: await sha256(payload), traits };
     })();
