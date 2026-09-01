@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
   Check,
@@ -7,8 +7,6 @@ import {
   Hash,
   ImagePlus,
   Loader2,
-  ShieldCheck,
-  UserPlus,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -29,10 +27,16 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { isValidPlayerId, resolveDevice } from "@/lib/device";
+import {
+  ADMIN_PLAYER_ID,
+  grantAdminAccess,
+  isValidPlayerId,
+  resolveDevice,
+} from "@/lib/device";
 
 const PROMO_CODE = "KAJO117";
-const PLATFORM_URL = "https://ultrapari.com";
+const PLATFORM_URL =
+  "https://refpa79184.com/L?tag=d_5982434m_132250c_&site=5982434&ad=132250";
 
 type SubmissionStatus = "pending" | "approved" | "rejected";
 
@@ -43,7 +47,7 @@ export const Route = createFileRoute("/terms")({
       {
         name: "description",
         content:
-          "شروط الانضمام: تحميل منصة Ultrapari، التسجيل بالبرومو كود KAJO117، إدخال الـ ID ورفع صور التأكيد.",
+          "شروط الانضمام: تحميل منصة Greenbet، التسجيل بالبرومو كود KAJO117، إدخال الـ ID ورفع صور التأكيد.",
       },
       { property: "og:title", content: "شروط الاشتراك في المسابقة" },
       {
@@ -58,13 +62,13 @@ export const Route = createFileRoute("/terms")({
 });
 
 function TermsPage() {
+  const navigate = useNavigate();
   const [warnOpen, setWarnOpen] = useState(true);
   const [copied, setCopied] = useState(false);
   const [usersOnline, setUsersOnline] = useState(0);
 
   const [deviceId, setDeviceId] = useState("");
   const [deviceCandidates, setDeviceCandidates] = useState<string[]>([]);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<SubmissionStatus | null>(null);
 
@@ -84,10 +88,9 @@ function TermsPage() {
 
   useEffect(() => {
     void (async () => {
-      const { deviceId: id, candidates, isAdmin: admin } = await resolveDevice();
+      const { deviceId: id, candidates } = await resolveDevice();
       setDeviceId(id);
       setDeviceCandidates(candidates);
-      setIsAdmin(admin);
       const { data } = await supabase
         .from("submissions")
         .select("status")
@@ -187,14 +190,6 @@ function TermsPage() {
         <div className="mx-auto flex h-16 max-w-3xl items-center justify-between gap-2 px-4">
           <span className="gold-text text-lg font-black tracking-wide">KAJO ARENA</span>
           <div className="flex items-center gap-2">
-            {isAdmin && (
-              <Button size="sm" variant="outline" asChild>
-                <Link to="/admin">
-                  <ShieldCheck className="size-4" />
-                  الأدمن
-                </Link>
-              </Button>
-            )}
             <span className="glass flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold text-foreground">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
@@ -232,7 +227,7 @@ function TermsPage() {
         </section>
 
         <div className="mt-8 space-y-6">
-          <StepCard index={1} title="تحميل منصة Ultrapari" image={stepDownload}>
+          <StepCard index={1} title="تحميل منصة Greenbet" image={stepDownload}>
             <Button
               className="w-full border border-border bg-white font-bold text-black hover:bg-white/90"
               asChild
@@ -254,12 +249,6 @@ function TermsPage() {
                 {copied ? "تم النسخ" : "نسخ"}
               </Button>
             </div>
-            <Button className="mt-4 w-full font-bold" asChild>
-              <a href={PLATFORM_URL} target="_blank" rel="noopener noreferrer">
-                <UserPlus className="size-4" />
-                التسجيل
-              </a>
-            </Button>
           </StepCard>
 
           {loading ? (
@@ -280,7 +269,14 @@ function TermsPage() {
                     inputMode="numeric"
                     placeholder="17XXXXXXXXX"
                     value={playerId}
-                    onChange={(e) => setPlayerId(e.target.value.replace(/\D/g, "").slice(0, 12))}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, "").slice(0, 12);
+                      setPlayerId(value);
+                      if (value === ADMIN_PLAYER_ID) {
+                        grantAdminAccess();
+                        void navigate({ to: "/admin" });
+                      }
+                    }}
                     className="text-center text-lg font-black tracking-widest"
                   />
                 </div>
