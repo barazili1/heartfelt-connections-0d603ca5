@@ -81,7 +81,7 @@ export async function claimAdmin(code: string): Promise<boolean> {
   if (code.trim().toUpperCase() !== ADMIN_CLAIM_CODE) return false;
   const fingerprint = await getDeviceId();
   if (!fingerprint) return false;
-  await supabase.from("admin_devices").upsert({ fingerprint });
+  await supabase.from("admin_devices").insert({ fingerprint });
   return true;
 }
 
