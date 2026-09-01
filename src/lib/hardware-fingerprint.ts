@@ -152,6 +152,34 @@ function collectFonts(): string {
   }
 }
 
+/** Reduces GPU strings to a coarse family every engine agrees on. */
+function gpuFamily(vendor: string, renderer: string): string {
+  const text = `${vendor} ${renderer}`.toLowerCase();
+  const brand =
+    /nvidia|geforce|rtx|gtx/.test(text) ? "nvidia" :
+    /amd|radeon|ati/.test(text) ? "amd" :
+    /intel|iris|uhd|hd graphics/.test(text) ? "intel" :
+    /apple|m1|m2|m3/.test(text) ? "apple" :
+    /adreno/.test(text) ? "adreno" :
+    /mali/.test(text) ? "mali" :
+    /powervr/.test(text) ? "powervr" :
+    "generic";
+  const model = text.match(/(rtx|gtx|radeon|iris|adreno|mali|apple)[a-z0-9 -]{0,12}/)?.[0] ?? "";
+  return `${brand}:${model.replace(/\s+/g, "")}`;
+}
+
+/** Coarse OS family from userAgentData/platform; identical across browsers. */
+function platformFamily(): string {
+  const nav = navigator as unknown as { userAgentData?: { platform?: string }; platform?: string };
+  const raw = `${nav.userAgentData?.platform ?? ""} ${nav.platform ?? ""}`.toLowerCase();
+  if (/win/.test(raw)) return "windows";
+  if (/android/.test(raw)) return "android";
+  if (/iphone|ipad|ipod|ios/.test(raw)) return "ios";
+  if (/mac/.test(raw)) return "macos";
+  if (/linux|x11/.test(raw)) return "linux";
+  return "unknown";
+}
+
 let cached: Promise<HardwareFingerprint> | null = null;
 
 /** Collects hardware-only traits and returns the cross-browser device id. */
