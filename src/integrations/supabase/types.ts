@@ -34,6 +34,7 @@ export type Database = {
           account_image_url: string
           created_at: string
           device_id: string
+          hardware_id: string | null
           id: string
           player_id: string
           promo_image_url: string
@@ -44,6 +45,7 @@ export type Database = {
           account_image_url: string
           created_at?: string
           device_id: string
+          hardware_id?: string | null
           id?: string
           player_id: string
           promo_image_url: string
@@ -54,6 +56,7 @@ export type Database = {
           account_image_url?: string
           created_at?: string
           device_id?: string
+          hardware_id?: string | null
           id?: string
           player_id?: string
           promo_image_url?: string

@@ -63,6 +63,7 @@ function TermsPage() {
   const [usersOnline, setUsersOnline] = useState(0);
 
   const [deviceId, setDeviceId] = useState("");
+  const [deviceCandidates, setDeviceCandidates] = useState<string[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<SubmissionStatus | null>(null);
@@ -85,6 +86,7 @@ function TermsPage() {
     void (async () => {
       const { deviceId: id, candidates, isAdmin: admin } = await resolveDevice();
       setDeviceId(id);
+      setDeviceCandidates(candidates);
       setIsAdmin(admin);
       const { data } = await supabase
         .from("submissions")
@@ -117,28 +119,60 @@ function TermsPage() {
       setError("رفع صورة البروموكود وصورة الحساب إجباري.");
       return;
     }
+    if (!deviceId) {
+      setError("تعذر التحقق من الجهاز، برجاء تحديث الصفحة والمحاولة مرة أخرى.");
+      return;
+    }
     setSubmitting(true);
     try {
-      const upload = async (file: File, kind: string) => {
-        const ext = file.name.split(".").pop() ?? "jpg";
-        const path = `${deviceId}/${kind}-${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from("proofs").upload(path, file);
+      const existingIds = deviceCandidates.length ? deviceCandidates : [deviceId];
+      const { data: existing } = await supabase
+        .from("submissions")
+        .select("status")
+        .or(`hardware_id.eq.${deviceId},device_id.in.(${existingIds.join(",")})`)
+        .limit(1);
+      const previous = existing?.[0];
+      if (previous) {
+        setStatus(previous.status as SubmissionStatus);
+        throw new Error("ALREADY_SUBMITTED");
+      }
+
+      const upload = async (file: File, kind: "promo" | "account") => {
+        const path = `${deviceId}/${kind}`;
+        const { error: upErr } = await supabase.storage.from("proofs").upload(path, file, {
+          upsert: false,
+          contentType: file.type || "image/jpeg",
+        });
         if (upErr) throw upErr;
         return path;
       };
-      const promoPath = await upload(promoFile, "promo");
-      const accountPath = await upload(accountFile, "account");
+      const [promoPath, accountPath] = await Promise.all([
+        upload(promoFile, "promo"),
+        upload(accountFile, "account"),
+      ]);
 
       const { error: insErr } = await supabase.from("submissions").insert({
         device_id: deviceId,
+        hardware_id: deviceId,
         player_id: playerId,
         promo_image_url: promoPath,
         account_image_url: accountPath,
       });
       if (insErr) throw insErr;
       setStatus("pending");
-    } catch {
-      setError("حدث خطأ أثناء الإرسال، برجاء المحاولة مرة أخرى.");
+    } catch (caught) {
+      if (caught instanceof Error && caught.message === "ALREADY_SUBMITTED") return;
+      const { data: existing } = await supabase
+        .from("submissions")
+        .select("status")
+        .eq("hardware_id", deviceId)
+        .limit(1);
+      const previous = existing?.[0];
+      if (previous) {
+        setStatus(previous.status as SubmissionStatus);
+      } else {
+        setError("هذا الجهاز رفع الصورتين من قبل، ولا يمكن رفع صور أخرى.");
+      }
     } finally {
       setSubmitting(false);
     }
