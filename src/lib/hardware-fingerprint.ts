@@ -1,23 +1,26 @@
 /**
- * Advanced hardware fingerprint collector.
+ * Cross-browser, hardware-only device fingerprint.
  *
- * Collects low-level physical device traits (GPU, canvas raster, audio DSP,
- * CPU/screen specs) and hashes them into a single stable id. These traits do
- * not depend on the browser profile, IP address, cookies or private mode, so
- * the resulting id survives browser switches, VPNs and incognito windows.
+ * Only OS/hardware level traits are used (GPU, CPU, memory, display, locale,
+ * installed system fonts). User agent, browser name, canvas raster output,
+ * AudioContext DSP output and any network/IP data are deliberately excluded,
+ * because those differ between rendering engines — which would break the id
+ * when the user switches from Chrome to Firefox to Edge. The remaining signals
+ * come from the physical machine, so the id is identical across browsers,
+ * private windows and with a VPN enabled.
  */
 
 export type HardwareTraits = {
   gpuVendor: string;
   gpuRenderer: string;
-  canvasHash: string;
-  audioHash: string;
   cpuCores: number;
-  colorDepth: number;
-  devicePixelRatio: number;
+  deviceMemory: string;
   screen: string;
-  platform: string;
+  colorDepth: number;
+  pixelDepth: number;
+  devicePixelRatio: number;
   timezone: string;
+  languages: string;
   fonts: string;
 };
 
@@ -26,20 +29,41 @@ export type HardwareFingerprint = {
   traits: HardwareTraits;
 };
 
+/** Standard OS-shipped font families; the detected set reveals the host OS build. */
 const FONT_CANDIDATES = [
   "Arial",
+  "Arial Narrow",
+  "Cambria",
+  "Calibri",
   "Courier New",
   "Georgia",
+  "Helvetica Neue",
+  "Lucida Grande",
+  "MS Gothic",
+  "Noto Naskh Arabic",
+  "Palatino",
+  "San Francisco",
+  "Segoe UI",
+  "Tahoma",
   "Times New Roman",
+  "Traditional Arabic",
   "Trebuchet MS",
   "Verdana",
-  "Tahoma",
-  "Segoe UI",
-  "Roboto",
-  "Helvetica Neue",
-  "Cairo",
-  "Noto Naskh Arabic",
 ];
+
+const EMPTY_TRAITS: HardwareTraits = {
+  gpuVendor: "",
+  gpuRenderer: "",
+  cpuCores: 0,
+  deviceMemory: "",
+  screen: "",
+  colorDepth: 0,
+  pixelDepth: 0,
+  devicePixelRatio: 0,
+  timezone: "",
+  languages: "",
+  fonts: "",
+};
 
 async function sha256(input: string): Promise<string> {
   try {
@@ -49,13 +73,13 @@ async function sha256(input: string): Promise<string> {
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
   } catch {
-    // Non-crypto fallback (insecure contexts).
-    let h1 = 0x811c9dc5;
+    // Non-crypto fallback for insecure contexts.
+    let h = 0x811c9dc5;
     for (let i = 0; i < input.length; i++) {
-      h1 ^= input.charCodeAt(i);
-      h1 = Math.imul(h1, 0x01000193) >>> 0;
+      h ^= input.charCodeAt(i);
+      h = Math.imul(h, 0x01000193) >>> 0;
     }
-    return h1.toString(16).padStart(8, "0").repeat(4);
+    return h.toString(16).padStart(8, "0").repeat(4);
   }
 }
 
@@ -66,98 +90,63 @@ function collectGpu(): { gpuVendor: string; gpuRenderer: string } {
       canvas.getContext("experimental-webgl")) as WebGLRenderingContext | null;
     if (!gl) return { gpuVendor: "unsupported", gpuRenderer: "unsupported" };
     const info = gl.getExtension("WEBGL_debug_renderer_info");
-    const gpuVendor = info
+    const vendor = info
       ? String(gl.getParameter(info.UNMASKED_VENDOR_WEBGL))
       : String(gl.getParameter(gl.VENDOR));
-    const gpuRenderer = info
+    const renderer = info
       ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL))
       : String(gl.getParameter(gl.RENDERER));
-    return { gpuVendor, gpuRenderer };
+    return { gpuVendor: normalize(vendor), gpuRenderer: normalize(renderer) };
   } catch {
     return { gpuVendor: "unavailable", gpuRenderer: "unavailable" };
   }
 }
 
-async function collectCanvas(): Promise<string> {
-  try {
-    const canvas = document.createElement("canvas");
-    canvas.width = 300;
-    canvas.height = 90;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return "unsupported";
-
-    const gradient = ctx.createLinearGradient(0, 0, 300, 90);
-    gradient.addColorStop(0, "#ffcc44");
-    gradient.addColorStop(0.5, "#101010");
-    gradient.addColorStop(1, "#22aaff");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 300, 90);
-
-    ctx.globalCompositeOperation = "multiply";
-    ctx.beginPath();
-    ctx.arc(70, 45, 34, 0, Math.PI * 2, true);
-    ctx.fillStyle = "rgba(255,0,128,0.6)";
-    ctx.fill();
-
-    ctx.globalCompositeOperation = "source-over";
-    ctx.font = "18px 'Arial'";
-    ctx.textBaseline = "alphabetic";
-    ctx.fillStyle = "#f0f0f0";
-    ctx.fillText("KAJO~Arena_117 مرحبا 😀", 8, 62);
-    ctx.strokeStyle = "rgba(255,255,255,0.4)";
-    ctx.strokeText("KAJO~Arena_117 مرحبا 😀", 9, 63);
-
-    return await sha256(canvas.toDataURL());
-  } catch {
-    return "unavailable";
-  }
+/**
+ * Normalizes GPU strings so engine-specific decorations (ANGLE wrappers,
+ * driver/API versions, "Direct3D11 vs Metal") do not change the hash.
+ */
+function normalize(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/angle\s*\(([^)]*)\)/g, "$1")
+    .replace(/direct3d\d*|d3d\d*|opengl(\s*es)?|metal|vulkan/g, " ")
+    .replace(/vs_\d+_\d+|ps_\d+_\d+/g, " ")
+    .replace(/\d+(\.\d+)+/g, " ")
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-async function collectAudio(): Promise<string> {
-  try {
-    const Ctx =
-      window.OfflineAudioContext ??
-      (window as unknown as { webkitOfflineAudioContext?: typeof OfflineAudioContext })
-        .webkitOfflineAudioContext;
-    if (!Ctx) return "unsupported";
-
-    const ctx = new Ctx(1, 44100, 44100);
-    const oscillator = ctx.createOscillator();
-    oscillator.type = "triangle";
-    oscillator.frequency.value = 10000;
-
-    const compressor = ctx.createDynamicsCompressor();
-    compressor.threshold.value = -50;
-    compressor.knee.value = 40;
-    compressor.ratio.value = 12;
-    compressor.attack.value = 0;
-    compressor.release.value = 0.25;
-
-    oscillator.connect(compressor);
-    compressor.connect(ctx.destination);
-    oscillator.start(0);
-
-    const buffer = await ctx.startRendering();
-    const channel = buffer.getChannelData(0);
-    let sum = 0;
-    for (let i = 4500; i < 5000; i++) sum += Math.abs(channel[i] ?? 0);
-    return await sha256(sum.toFixed(8));
-  } catch {
-    return "unavailable";
-  }
-}
-
+/** Detects locally installed fonts; presence-only, so per-engine metrics don't matter. */
 function collectFonts(): string {
+  const found: string[] = [];
   try {
+    const checker = document.fonts;
+    if (checker && typeof checker.check === "function") {
+      for (const font of FONT_CANDIDATES) {
+        try {
+          if (checker.check(`16px "${font}"`)) found.push(font);
+        } catch {
+          /* ignore single font failure */
+        }
+      }
+      if (found.length) return found.sort().join(",");
+    }
+
+    // Fallback: width comparison against generic families.
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
     if (!ctx) return "unsupported";
-    const baseline = (font: string) => {
-      ctx.font = `16px ${font}`;
-      return Math.round(ctx.measureText("mmmmmmmmmmlliWWWأبجد").width);
+    const width = (family: string) => {
+      ctx.font = `16px ${family}`;
+      return Math.round(ctx.measureText("mmmmmmmmmmlliWWW").width);
     };
-    const fallback = baseline("monospace");
-    return FONT_CANDIDATES.filter((f) => baseline(`'${f}', monospace`) !== fallback).join(",");
+    const base = width("monospace");
+    for (const font of FONT_CANDIDATES) {
+      if (width(`"${font}", monospace`) !== base) found.push(font);
+    }
+    return found.sort().join(",");
   } catch {
     return "unavailable";
   }
@@ -165,63 +154,43 @@ function collectFonts(): string {
 
 let cached: Promise<HardwareFingerprint> | null = null;
 
-/** Collects hardware traits and returns a stable SHA-256 device id. */
+/** Collects hardware-only traits and returns the cross-browser device id. */
 export function getHardwareFingerprint(force = false): Promise<HardwareFingerprint> {
   if (typeof window === "undefined") {
-    return Promise.resolve({
-      id: "",
-      traits: {
-        gpuVendor: "",
-        gpuRenderer: "",
-        canvasHash: "",
-        audioHash: "",
-        cpuCores: 0,
-        colorDepth: 0,
-        devicePixelRatio: 0,
-        screen: "",
-        platform: "",
-        timezone: "",
-        fonts: "",
-      },
-    });
+    return Promise.resolve({ id: "", traits: EMPTY_TRAITS });
   }
   if (force) cached = null;
   if (!cached) {
     cached = (async () => {
-      // Yield to the browser so collection never blocks first paint.
+      // Yield first so collection never blocks the first paint.
       await new Promise((r) => setTimeout(r, 0));
+
       const { gpuVendor, gpuRenderer } = collectGpu();
-      const [canvasHash, audioHash] = await Promise.all([collectCanvas(), collectAudio()]);
+      const memory = (navigator as unknown as { deviceMemory?: number }).deviceMemory;
+
       const traits: HardwareTraits = {
         gpuVendor,
         gpuRenderer,
-        canvasHash,
-        audioHash,
         cpuCores: navigator.hardwareConcurrency ?? 0,
-        colorDepth: window.screen.colorDepth ?? 0,
-        devicePixelRatio: window.devicePixelRatio ?? 1,
+        deviceMemory: typeof memory === "number" ? `${memory}GB` : "unknown",
         screen: `${window.screen.width}x${window.screen.height}`,
-        platform:
-          (navigator as unknown as { userAgentData?: { platform?: string } }).userAgentData
-            ?.platform ?? navigator.platform,
+        colorDepth: window.screen.colorDepth ?? 0,
+        pixelDepth: window.screen.pixelDepth ?? 0,
+        devicePixelRatio: Math.round((window.devicePixelRatio ?? 1) * 100) / 100,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? "",
+        languages: [...new Set((navigator.languages ?? [navigator.language]).map((l) => l.split("-")[0]))]
+          .sort()
+          .join(","),
         fonts: collectFonts(),
       };
-      const id = await sha256(
-        [
-          traits.gpuVendor,
-          traits.gpuRenderer,
-          traits.canvasHash,
-          traits.audioHash,
-          traits.cpuCores,
-          traits.colorDepth,
-          traits.devicePixelRatio,
-          traits.screen,
-          traits.platform,
-          traits.fonts,
-        ].join("|"),
-      );
-      return { id, traits };
+
+      // Normalized + sorted payload → identical across browsers on one machine.
+      const payload = Object.entries(traits)
+        .map(([key, value]) => `${key}=${String(value).toLowerCase().trim()}`)
+        .sort()
+        .join("|");
+
+      return { id: await sha256(payload), traits };
     })();
   }
   return cached;
