@@ -1,5 +1,16 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { AlertTriangle, Check, Copy, Download, ImagePlus, UserPlus } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  AlertTriangle,
+  Check,
+  Copy,
+  Download,
+  Hash,
+  ImagePlus,
+  Loader2,
+  ShieldCheck,
+  UserPlus,
+  X,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import logo from "@/assets/logo.png";
@@ -16,9 +27,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
+import { getDeviceId, isAdminDevice, isValidPlayerId } from "@/lib/device";
 
 const PROMO_CODE = "KAJO117";
 const PLATFORM_URL = "https://ultrapari.com";
+
+type SubmissionStatus = "pending" | "approved" | "rejected";
 
 export const Route = createFileRoute("/terms")({
   head: () => ({
@@ -27,13 +43,15 @@ export const Route = createFileRoute("/terms")({
       {
         name: "description",
         content:
-          "شروط الانضمام: تحميل منصة Ultrapari، التسجيل بالبرومو كود KAJO117، ورفع صور التأكيد.",
+          "شروط الانضمام: تحميل منصة Ultrapari، التسجيل بالبرومو كود KAJO117، إدخال الـ ID ورفع صور التأكيد.",
       },
       { property: "og:title", content: "شروط الاشتراك في المسابقة" },
       {
         property: "og:description",
         content: "شروط الانضمام للمسابقة خطوة بخطوة مع رفع صور التأكيد.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: TermsPage,
@@ -43,7 +61,16 @@ function TermsPage() {
   const [warnOpen, setWarnOpen] = useState(true);
   const [copied, setCopied] = useState(false);
   const [usersOnline, setUsersOnline] = useState(0);
-  const [confirmed, setConfirmed] = useState(false);
+
+  const [deviceId, setDeviceId] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<SubmissionStatus | null>(null);
+
+  const [playerId, setPlayerId] = useState("");
+  const [promoFile, setPromoFile] = useState<File | null>(null);
+  const [accountFile, setAccountFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setUsersOnline(120 + Math.floor(Math.random() * 80));
@@ -51,6 +78,20 @@ function TermsPage() {
       setUsersOnline((v) => Math.max(80, v + Math.floor(Math.random() * 7) - 3));
     }, 4000);
     return () => window.clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const id = getDeviceId();
+    setDeviceId(id);
+    void (async () => {
+      const { data } = await supabase
+        .from("submissions")
+        .select("status")
+        .eq("device_id", id)
+        .maybeSingle();
+      if (data) setStatus(data.status as SubmissionStatus);
+      setLoading(false);
+    })();
   }, []);
 
   const copyCode = async () => {
@@ -63,21 +104,68 @@ function TermsPage() {
     }
   };
 
+  const submit = async () => {
+    setError(null);
+    if (!isValidPlayerId(playerId)) {
+      setError("الـ ID يجب أن يبدأ بـ 17 وطوله من 9 إلى 12 رقمًا.");
+      return;
+    }
+    if (!promoFile || !accountFile) {
+      setError("رفع صورة البروموكود وصورة الحساب إجباري.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const upload = async (file: File, kind: string) => {
+        const ext = file.name.split(".").pop() ?? "jpg";
+        const path = `${deviceId}/${kind}-${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("proofs").upload(path, file);
+        if (upErr) throw upErr;
+        return path;
+      };
+      const promoPath = await upload(promoFile, "promo");
+      const accountPath = await upload(accountFile, "account");
+
+      const { error: insErr } = await supabase.from("submissions").insert({
+        device_id: deviceId,
+        player_id: playerId,
+        promo_image_url: promoPath,
+        account_image_url: accountPath,
+      });
+      if (insErr) throw insErr;
+      setStatus("pending");
+    } catch {
+      setError("حدث خطأ أثناء الإرسال، برجاء المحاولة مرة أخرى.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div dir="rtl" className="relative min-h-screen overflow-hidden bg-background pb-20">
       <Particles />
       <div className="pointer-events-none absolute inset-x-0 top-0 z-0 h-96 bg-[radial-gradient(circle_at_50%_0%,color-mix(in_oklab,var(--primary)_14%,transparent),transparent_70%)]" />
 
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/40 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-4">
+        <div className="mx-auto flex h-16 max-w-3xl items-center justify-between gap-2 px-4">
           <span className="gold-text text-lg font-black tracking-wide">KAJO ARENA</span>
-          <span className="glass flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold text-foreground">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+          <div className="flex items-center gap-2">
+            {isAdminDevice(deviceId) && (
+              <Button size="sm" variant="outline" asChild>
+                <Link to="/admin">
+                  <ShieldCheck className="size-4" />
+                  الأدمن
+                </Link>
+              </Button>
+            )}
+            <span className="glass flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold text-foreground">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+              </span>
+              Users online : {usersOnline}
             </span>
-            Users online : {usersOnline}
-          </span>
+          </div>
         </div>
       </header>
 
@@ -128,17 +216,57 @@ function TermsPage() {
             </Button>
           </StepCard>
 
-          <StepCard index={3} title="رفع صور التأكيد" image={stepUpload}>
-            <p className="mb-3 text-sm font-black text-destructive">إجباري</p>
-            <div className="grid grid-cols-2 gap-3">
-              <UploadBox label="رفع صورة البروموكود" />
-              <UploadBox label="رفع صورة الحساب" />
+          {loading ? (
+            <div className="glass flex items-center justify-center gap-2 rounded-2xl p-8 text-muted-foreground">
+              <Loader2 className="size-5 animate-spin" />
+              جاري التحقق من جهازك...
             </div>
-            <Button className="mt-4 w-full font-bold" onClick={() => setConfirmed(true)}>
-              <Check className="size-4" />
-              {confirmed ? "تم التأكيد" : "تأكيد"}
-            </Button>
-          </StepCard>
+          ) : status ? (
+            <StatusCard status={status} />
+          ) : (
+            <>
+              <StepCard index={3} title="إدخال الـ ID الخاص بك" image={stepPromo}>
+                <p className="mb-3 text-sm font-black text-destructive">إجباري</p>
+                <div className="flex items-center gap-2">
+                  <Hash className="size-5 shrink-0 text-primary" />
+                  <Input
+                    dir="ltr"
+                    inputMode="numeric"
+                    placeholder="17XXXXXXXXX"
+                    value={playerId}
+                    onChange={(e) => setPlayerId(e.target.value.replace(/\D/g, "").slice(0, 12))}
+                    className="text-center text-lg font-black tracking-widest"
+                  />
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  يبدأ بـ 17 ويكون طوله من 9 إلى 12 رقمًا.
+                </p>
+              </StepCard>
+
+              <StepCard index={4} title="رفع صور التأكيد" image={stepUpload}>
+                <p className="mb-3 text-sm font-black text-destructive">إجباري</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <UploadBox label="رفع صورة البروموكود" onPick={setPromoFile} />
+                  <UploadBox label="رفع صورة الحساب" onPick={setAccountFile} />
+                </div>
+                {error && (
+                  <p className="mt-3 text-center text-sm font-bold text-destructive">{error}</p>
+                )}
+                <Button
+                  className="mt-4 w-full font-bold"
+                  onClick={submit}
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Check className="size-4" />
+                  )}
+                  تأكيد
+                </Button>
+              </StepCard>
+            </>
+          )}
         </div>
       </main>
 
@@ -185,6 +313,42 @@ function TermsPage() {
   );
 }
 
+function StatusCard({ status }: { status: SubmissionStatus }) {
+  const content = {
+    pending: {
+      icon: <Loader2 className="size-7 animate-spin" />,
+      title: "طلبك تحت المراجعة",
+      text: "تم استلام بياناتك وصورك بنجاح، سيتم مراجعة الطلب من الإدارة قريبًا.",
+    },
+    approved: {
+      icon: <Check className="size-7" />,
+      title: "تم المشاركة في المسابقة بنجاح",
+      text: "مبروك! تم تأكيد اشتراكك في المسابقة. بالتوفيق.",
+    },
+    rejected: {
+      icon: <X className="size-7" />,
+      title: "تم رفض طلبك",
+      text: "برجاء التأكد من الالتزام بالشروط والتواصل مع الإدارة.",
+    },
+  }[status];
+
+  return (
+    <section className="glass rounded-2xl p-8 text-center">
+      <div className="relative mx-auto mb-4 flex size-16 items-center justify-center">
+        <span className="absolute inset-0 rounded-full border border-primary/40" />
+        <span className="flex size-12 items-center justify-center rounded-full bg-gradient-to-b from-primary/25 to-transparent text-primary">
+          {content.icon}
+        </span>
+      </div>
+      <h2 className="gold-text text-xl font-black">{content.title}</h2>
+      <p className="mt-2 text-sm leading-7 text-muted-foreground">{content.text}</p>
+      <p className="mt-4 text-xs text-muted-foreground">
+        الاشتراك مسموح مرة واحدة فقط لكل جهاز.
+      </p>
+    </section>
+  );
+}
+
 function StepCard({
   index,
   title,
@@ -217,7 +381,7 @@ function StepCard({
   );
 }
 
-function UploadBox({ label }: { label: string }) {
+function UploadBox({ label, onPick }: { label: string; onPick: (file: File) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
 
@@ -245,7 +409,10 @@ function UploadBox({ label }: { label: string }) {
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) setPreview(URL.createObjectURL(file));
+          if (file) {
+            setPreview(URL.createObjectURL(file));
+            onPick(file);
+          }
         }}
       />
     </div>

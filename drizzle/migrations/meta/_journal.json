@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1788269340010,
+      "tag": "0000_create_contest_submissions",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788269366902,
+      "tag": "0001_proofs_storage_policies",
+      "breakpoints": true
+    }
+  ]
+}
