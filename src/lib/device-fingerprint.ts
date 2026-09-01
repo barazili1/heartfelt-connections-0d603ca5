@@ -99,7 +99,7 @@ async function getAudioHash(): Promise<string> {
     const buffer = await ctx.startRendering();
     const data = buffer.getChannelData(0).subarray(4500, 5000);
     let sum = 0;
-    for (let i = 0; i < data.length; i += 1) sum += Math.abs(data[i]);
+    for (let i = 0; i < data.length; i += 1) sum += Math.abs(data[i] ?? 0);
     return fastHash(sum.toString());
   } catch {
     return "error";
