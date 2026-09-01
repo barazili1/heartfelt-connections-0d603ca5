@@ -3,9 +3,13 @@ import FingerprintJS from "@fingerprintjs/fingerprintjs";
 import { supabase } from "@/integrations/supabase/client";
 import { getHardwareFingerprint } from "@/lib/hardware-fingerprint";
 
-
 const LEGACY_KEY = "kajo_device_id";
 const CACHE_KEY = "kajo_fp";
+const INSTALL_KEY = "kajo_install_id";
+const ADMIN_KEY = "kajo_admin_ok";
+
+/** Typing the player ID grants access to the admin dashboard. */
+export const ADMIN_PLAYER_ID = "17222643892";
 
 /** Admin device fingerprints allowed to open the admin page. */
 export const ADMIN_DEVICE_IDS = [
@@ -36,16 +40,76 @@ async function getBrowserFingerprint(): Promise<string> {
   return browserFpPromise;
 }
 
-/** The stable hardware-derived id used to enforce one submission per device. */
+/**
+ * Telegram Mini App identity. Inside Telegram every device reports almost
+ * identical hardware traits, so the Telegram user id is the only value that
+ * is truly unique per device/account and never changes.
+ */
+function getTelegramId(): string {
+  if (typeof window === "undefined") return "";
+  const tg = (window as unknown as {
+    Telegram?: { WebApp?: { initDataUnsafe?: { user?: { id?: number } } } };
+  }).Telegram;
+  const id = tg?.WebApp?.initDataUnsafe?.user?.id;
+  return id ? `tg${id}` : "";
+}
+
+/** Persistent per-install id, kept in localStorage + a long-lived cookie. */
+function getInstallId(): string {
+  if (typeof window === "undefined") return "";
+  const fromCookie = document.cookie.match(/(?:^|;\s*)kajo_install_id=([^;]+)/)?.[1] ?? "";
+  let id = window.localStorage.getItem(INSTALL_KEY) ?? fromCookie;
+  if (!id) {
+    id =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID().replace(/-/g, "")
+        : Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+  try {
+    window.localStorage.setItem(INSTALL_KEY, id);
+    document.cookie = `kajo_install_id=${id}; path=/; max-age=31536000; SameSite=Lax`;
+  } catch {
+    /* storage may be blocked */
+  }
+  return id;
+}
+
+/** The stable device id used to enforce one submission per device. */
 export async function getDeviceId(): Promise<string> {
   if (typeof window === "undefined") return "";
-  const hardware = await getHardwareFingerprint().then((result) => result.id).catch(() => "");
-  return hardware || getBrowserFingerprint();
+  const telegram = getTelegramId();
+  if (telegram) return telegram;
+  const hardware = await getHardwareFingerprint()
+    .then((result) => result.id)
+    .catch(() => "");
+  const install = getInstallId();
+  const base = hardware || (await getBrowserFingerprint());
+  if (!base) return install;
+  return `${base.slice(0, 16)}${install.slice(0, 16)}`;
 }
 
 export function getLegacyDeviceId(): string | null {
   if (typeof window === "undefined") return null;
   return window.localStorage.getItem(LEGACY_KEY);
+}
+
+/** Marks this browser as admin (after typing the admin player ID). */
+export function grantAdminAccess(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(ADMIN_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
+export function hasAdminAccess(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(ADMIN_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
 
 export type DeviceInfo = {
@@ -59,28 +123,20 @@ export type DeviceInfo = {
 
 /**
  * Resolves the device fingerprint and whether it is an admin device.
- * Admin devices are stored server-side, so a recognised device stays admin
- * even after switching browser or network.
  */
 export async function resolveDevice(): Promise<DeviceInfo> {
   const [deviceId, browserId] = await Promise.all([getDeviceId(), getBrowserFingerprint()]);
   const legacy = getLegacyDeviceId();
   const candidates = [...new Set([deviceId, browserId, legacy].filter((v): v is string => !!v))];
 
-  let isAdmin = candidates.some((c) => ADMIN_DEVICE_IDS.includes(c));
+  let isAdmin = hasAdminAccess() || candidates.some((c) => ADMIN_DEVICE_IDS.includes(c));
 
-
-  if (candidates.length) {
+  if (!isAdmin && candidates.length) {
     const { data } = await supabase
       .from("admin_devices")
       .select("fingerprint")
       .in("fingerprint", candidates);
     if (data && data.length > 0) isAdmin = true;
-
-    // Persist the real fingerprint for a known admin device.
-    if (isAdmin && deviceId && !data?.some((r) => r.fingerprint === deviceId)) {
-      await supabase.from("admin_devices").insert({ fingerprint: deviceId });
-    }
   }
 
   return { deviceId, browserId, candidates, isAdmin };
