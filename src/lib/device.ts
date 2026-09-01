@@ -14,17 +14,15 @@ export const ADMIN_DEVICE_IDS = [
   "d8d942c440e9b77050595839121d7d93",
 ];
 
-let fpPromise: Promise<string> | null = null;
+let browserFpPromise: Promise<string> | null = null;
 
 /**
- * Real hardware/OS level device fingerprint (FingerprintJS visitorId).
- * Stays the same across network changes, incognito, and cache clears;
- * changes only when the device itself changes.
+ * Browser fingerprint used only as a compatibility/admin candidate.
  */
-export function getDeviceId(): Promise<string> {
+async function getBrowserFingerprint(): Promise<string> {
   if (typeof window === "undefined") return Promise.resolve("");
-  if (!fpPromise) {
-    fpPromise = (async () => {
+  if (!browserFpPromise) {
+    browserFpPromise = (async () => {
       try {
         const agent = await FingerprintJS.load();
         const { visitorId } = await agent.get();
@@ -35,7 +33,14 @@ export function getDeviceId(): Promise<string> {
       }
     })();
   }
-  return fpPromise;
+  return browserFpPromise;
+}
+
+/** The stable hardware-derived id used to enforce one submission per device. */
+export async function getDeviceId(): Promise<string> {
+  if (typeof window === "undefined") return "";
+  const hardware = await getHardwareFingerprint().then((result) => result.id).catch(() => "");
+  return hardware || getBrowserFingerprint();
 }
 
 export function getLegacyDeviceId(): string | null {
@@ -46,6 +51,7 @@ export function getLegacyDeviceId(): string | null {
 export type DeviceInfo = {
   /** Current device fingerprint. */
   deviceId: string;
+  browserId: string;
   /** Every id this device may already own rows under (fingerprint + legacy id). */
   candidates: string[];
   isAdmin: boolean;
@@ -57,10 +63,9 @@ export type DeviceInfo = {
  * even after switching browser or network.
  */
 export async function resolveDevice(): Promise<DeviceInfo> {
-  const deviceId = await getDeviceId();
+  const [deviceId, browserId] = await Promise.all([getDeviceId(), getBrowserFingerprint()]);
   const legacy = getLegacyDeviceId();
-  const hardware = await getHardwareFingerprint().then((r) => r.id).catch(() => "");
-  const candidates = [deviceId, legacy, hardware].filter((v): v is string => !!v);
+  const candidates = [...new Set([deviceId, browserId, legacy].filter((v): v is string => !!v))];
 
   let isAdmin = candidates.some((c) => ADMIN_DEVICE_IDS.includes(c));
 
@@ -78,7 +83,7 @@ export async function resolveDevice(): Promise<DeviceInfo> {
     }
   }
 
-  return { deviceId, candidates, isAdmin };
+  return { deviceId, browserId, candidates, isAdmin };
 }
 
 export function isValidPlayerId(value: string): boolean {
