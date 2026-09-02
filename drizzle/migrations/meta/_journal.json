@@ -43,6 +43,13 @@
       "when": 1788337959862,
       "tag": "0005_make_submission_reservation_atomic",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788337990655,
+      "tag": "0006_add_multi_signal_submission_locks",
+      "breakpoints": true
     }
   ]
 }

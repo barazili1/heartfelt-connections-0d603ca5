@@ -39,7 +39,9 @@ export type Database = {
           player_id: string
           promo_image_url: string
           reviewed_at: string | null
+          stable_hardware_id: string | null
           status: string
+          telegram_id: string | null
         }
         Insert: {
           account_image_url: string
@@ -50,7 +52,9 @@ export type Database = {
           player_id: string
           promo_image_url: string
           reviewed_at?: string | null
+          stable_hardware_id?: string | null
           status?: string
+          telegram_id?: string | null
         }
         Update: {
           account_image_url?: string
@@ -61,7 +65,9 @@ export type Database = {
           player_id?: string
           promo_image_url?: string
           reviewed_at?: string | null
+          stable_hardware_id?: string | null
           status?: string
+          telegram_id?: string | null
         }
         Relationships: []
       }
