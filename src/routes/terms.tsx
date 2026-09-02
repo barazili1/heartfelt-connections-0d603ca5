@@ -54,6 +54,8 @@ function TermsPage() {
   const [usersOnline, setUsersOnline] = useState(0);
 
   const [deviceId, setDeviceId] = useState("");
+  const [stableHardwareId, setStableHardwareId] = useState("");
+  const [telegramId, setTelegramId] = useState("");
   const [deviceCandidates, setDeviceCandidates] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<SubmissionStatus | null>(null);
@@ -74,15 +76,26 @@ function TermsPage() {
 
   useEffect(() => {
     void (async () => {
-      const { deviceId: id, candidates } = await resolveDevice();
+      const {
+        deviceId: id,
+        stableHardwareId: stableId,
+        telegramId: telegram,
+        candidates,
+      } = await resolveDevice();
       setDeviceId(id);
+      setStableHardwareId(stableId);
+      setTelegramId(telegram);
       setDeviceCandidates(candidates);
+      const identityFilters = [
+        `hardware_id.eq.${id}`,
+        `stable_hardware_id.eq.${stableId}`,
+        `device_id.in.(${(candidates.length ? candidates : [id]).join(",")})`,
+      ];
+      if (telegram) identityFilters.push(`telegram_id.eq.${telegram}`);
       const { data } = await supabase
         .from("submissions")
         .select("status")
-        .or(
-          `hardware_id.eq.${id},device_id.in.(${(candidates.length ? candidates : [id]).join(",")})`,
-        )
+        .or(identityFilters.join(","))
         .limit(1);
       const first = data?.[0];
       if (first) setStatus(first.status as SubmissionStatus);
@@ -123,23 +136,44 @@ function TermsPage() {
       setError("رفع صورة البروموكود وصورة الحساب إجباري.");
       return;
     }
-    if (!deviceId) {
+    if (!deviceId || !stableHardwareId) {
       setError("تعذر التحقق من الجهاز، برجاء تحديث الصفحة والمحاولة مرة أخرى.");
       return;
     }
     setSubmitting(true);
     try {
       const existingIds = deviceCandidates.length ? deviceCandidates : [deviceId];
+      const identityFilters = [
+        `hardware_id.eq.${deviceId}`,
+        `stable_hardware_id.eq.${stableHardwareId}`,
+        `device_id.in.(${existingIds.join(",")})`,
+      ];
+      if (telegramId) identityFilters.push(`telegram_id.eq.${telegramId}`);
       const { data: existing } = await supabase
         .from("submissions")
         .select("status")
-        .or(`hardware_id.eq.${deviceId},device_id.in.(${existingIds.join(",")})`)
+        .or(identityFilters.join(","))
         .limit(1);
       const previous = existing?.[0];
       if (previous) {
         setStatus(previous.status as SubmissionStatus);
         throw new Error("ALREADY_SUBMITTED");
       }
+
+      const promoPath = `${deviceId}/promo`;
+      const accountPath = `${deviceId}/account`;
+
+      // Reserve all device/account identities atomically before storage accepts files.
+      const { error: insErr } = await supabase.from("submissions").insert({
+        device_id: deviceId,
+        hardware_id: deviceId,
+        stable_hardware_id: stableHardwareId,
+        telegram_id: telegramId || null,
+        player_id: playerId,
+        promo_image_url: promoPath,
+        account_image_url: accountPath,
+      });
+      if (insErr) throw insErr;
 
       const upload = async (file: File, kind: "promo" | "account") => {
         const path = `${deviceId}/${kind}`;
@@ -150,26 +184,23 @@ function TermsPage() {
         if (upErr) throw upErr;
         return path;
       };
-      const [promoPath, accountPath] = await Promise.all([
+      await Promise.all([
         upload(promoFile, "promo"),
         upload(accountFile, "account"),
       ]);
-
-      const { error: insErr } = await supabase.from("submissions").insert({
-        device_id: deviceId,
-        hardware_id: deviceId,
-        player_id: playerId,
-        promo_image_url: promoPath,
-        account_image_url: accountPath,
-      });
-      if (insErr) throw insErr;
       setStatus("pending");
     } catch (caught) {
       if (caught instanceof Error && caught.message === "ALREADY_SUBMITTED") return;
       const { data: existing } = await supabase
         .from("submissions")
         .select("status")
-        .eq("hardware_id", deviceId)
+        .or(
+          [
+            `hardware_id.eq.${deviceId}`,
+            `stable_hardware_id.eq.${stableHardwareId}`,
+            ...(telegramId ? [`telegram_id.eq.${telegramId}`] : []),
+          ].join(","),
+        )
         .limit(1);
       const previous = existing?.[0];
       if (previous) {

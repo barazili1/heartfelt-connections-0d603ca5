@@ -2,6 +2,7 @@ import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
 import { supabase } from "@/integrations/supabase/client";
 import { generateDeviceFingerprint } from "@/lib/device-fingerprint";
+import { getHardwareFingerprint } from "@/lib/hardware-fingerprint";
 
 const LEGACY_KEY = "kajo_device_id";
 const CACHE_KEY = "kajo_fp";
@@ -37,7 +38,7 @@ async function getBrowserFingerprint(): Promise<string> {
 }
 
 /** Telegram identity is retained only to detect submissions made by older app versions. */
-function getTelegramId(): string {
+export function getTelegramId(): string {
   if (typeof window === "undefined") return "";
   const tg = (
     window as unknown as {
@@ -89,6 +90,10 @@ export type DeviceInfo = {
   /** Current device fingerprint. */
   deviceId: string;
   browserId: string;
+  /** Coarser browser-independent hardware lock used alongside the high-entropy id. */
+  stableHardwareId: string;
+  /** Telegram account is an additional lock when the page runs as a Mini App. */
+  telegramId: string;
   /** Every id this device may already own rows under (fingerprint + legacy id). */
   candidates: string[];
   isAdmin: boolean;
@@ -98,11 +103,17 @@ export type DeviceInfo = {
  * Resolves the device fingerprint and whether it is an admin device.
  */
 export async function resolveDevice(): Promise<DeviceInfo> {
-  const [deviceId, browserId] = await Promise.all([getDeviceId(), getBrowserFingerprint()]);
+  const [deviceId, browserId, hardware] = await Promise.all([
+    getDeviceId(),
+    getBrowserFingerprint(),
+    getHardwareFingerprint(),
+  ]);
   const legacy = getLegacyDeviceId();
   const telegram = getTelegramId();
   const candidates = [
-    ...new Set([deviceId, telegram, browserId, legacy].filter((v): v is string => !!v)),
+    ...new Set(
+      [deviceId, hardware.id, telegram, browserId, legacy].filter((v): v is string => !!v),
+    ),
   ];
 
   let isAdmin = hasAdminAccess() || candidates.some((c) => ADMIN_DEVICE_IDS.includes(c));
@@ -115,7 +126,14 @@ export async function resolveDevice(): Promise<DeviceInfo> {
     if (data && data.length > 0) isAdmin = true;
   }
 
-  return { deviceId, browserId, candidates, isAdmin };
+  return {
+    deviceId,
+    browserId,
+    stableHardwareId: hardware.id,
+    telegramId: telegram,
+    candidates,
+    isAdmin,
+  };
 }
 
 export function isValidPlayerId(value: string): boolean {
